@@ -24,7 +24,7 @@ package net.wayfarerx.circumvolve.model
  * @param members The members that have been assigned to a team by role.
  * @param backups The backup members and the roles they support.
  */
-case class Team private[model] (members: Map[Role, Vector[Member]], backups: Map[Member, Vector[Role]]) {
+case class Team (members: Map[Role, Vector[Member]], backups: Map[Member, Vector[Role]]) {
 
   /**
    * Adds a member to this team under the specified role.

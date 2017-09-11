@@ -23,7 +23,7 @@ package net.wayfarerx.circumvolve.model
  *
  * @param teams The teams that were created for an event, most-recent first.
  */
-case class History private[model] (teams: Vector[Team] = Vector()) {
+case class History (teams: Vector[Team] = Vector()) {
 
   /**
    * Includes the specified team as the most recent member of this history.

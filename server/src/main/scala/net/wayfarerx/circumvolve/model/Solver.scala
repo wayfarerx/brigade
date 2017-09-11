@@ -33,9 +33,9 @@ object Solver {
   def apply(roster: Roster, history: History): Team = {
     val normal = roster.normalized
     val team = Team(normal.assignments.groupBy(_._2).mapValues(_.map(_._1)), Map())
-    Solver.solve(team,
+    solve(team,
       for ((k, v) <- normal.slots) yield k -> (team.members get k map (v - _.size) getOrElse v),
-      Candidate(normal.volunteers, history))
+      Candidate.from(normal.volunteers, history))
   }
 
   /**
@@ -57,7 +57,7 @@ object Solver {
       case None =>
         team.copy(backups = candidates groupBy (_.member) mapValues (_ map { candidate =>
           candidate.role -> candidate.preference
-        } sortBy (_._2) map (_._1) filter (r => openings(r) > 0)) filter (_._2.nonEmpty))
+        } sortBy (_._2) map (_._1)) filter (_._2.nonEmpty))
     }
 
   /**
@@ -123,7 +123,7 @@ object Solver {
      * @param history    The history of member participation in the event.
      * @return A collection of candidates for the event.
      */
-    def apply(volunteers: Vector[(Member, Role)], history: History): Vector[Candidate] = {
+    def from(volunteers: Vector[(Member, Role)], history: History): Vector[Candidate] = {
       val preferences = volunteers.groupBy(_._1).mapValues(_.map(_._2).zipWithIndex.toMap)
       val candidates = for {
         (member, role) <- volunteers
