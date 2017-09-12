@@ -32,9 +32,11 @@ object Solver {
    */
   def apply(roster: Roster, history: History): Team = {
     val normal = roster.normalized
-    val team = Team(normal.assignments.groupBy(_._2).mapValues(_.map(_._1)), Map())
+    val team = (Team(normal.slots.map(_._1 -> Vector[Member]()), Vector()) /: normal.assignments) { (t, a) =>
+      t.add(a._2, a._1)
+    }
     solve(team,
-      for ((k, v) <- normal.slots) yield k -> (team.members get k map (v - _.size) getOrElse v),
+      for ((r, c) <- normal.slots.toMap) yield r -> (team.members find (_._1 == r) map (c - _._2.size) getOrElse c),
       Candidate.from(normal.volunteers, history))
   }
 
@@ -55,9 +57,10 @@ object Solver {
           openings + (role -> (openings(role) - 1)),
           candidates filterNot (_.member == member))
       case None =>
-        team.copy(backups = candidates groupBy (_.member) mapValues (_ map { candidate =>
+        val backups = candidates groupBy (_.member) mapValues (_ map { candidate =>
           candidate.role -> candidate.preference
-        } sortBy (_._2) map (_._1)) filter (_._2.nonEmpty))
+        } sortBy (_._2) map (_._1))
+        team.copy(backups = candidates.map(_.member).distinct.map(m => m -> backups(m)))
     }
 
   /**
@@ -129,8 +132,8 @@ object Solver {
         (member, role) <- volunteers
         scores = for {
           (team, index) <- history.teams.reverse.zipWithIndex
-          score <- team.members.get(role) filter (_ contains member) map (_ => index + 1)
-        } yield score
+          (_, members) <- team.members.find(_._1 == role) if members contains member
+        } yield index + 1
       } yield Candidate(member, role, scores.sum, preferences(member)(role))
       candidates sortBy (_.score)
     }

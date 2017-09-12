@@ -21,21 +21,24 @@ package net.wayfarerx.circumvolve.model
 /**
  * The top-level event sign-up and history tracker.
  *
- * @param name    The name of this event.
  * @param roster  The roster for this event.
  * @param history The history of teams for this event.
  */
-case class Event(name: String, roster: Option[Roster] = None, history: History = History()) {
+case class Event(roster: Option[Roster] = None, history: History = History()) {
 
   /**
    * Opens this event by assigning or reassigning the available slots.
    *
    * @param slots The slots that are available to fill in this event.
-   * @return A copy of this event with the specified slots available.
+   * @return A copy of this event and its new roster.
    */
-  def open(slots: Map[Role, Int]): Event = roster match {
-    case Some(r) => copy(roster = Some(r.copy(slots = slots)))
-    case None => copy(roster = Some(Roster(slots)))
+  def open(slots: Vector[(Role, Int)]): (Event, Roster) = roster match {
+    case Some(r) =>
+      val rr = r.copy(slots = slots)
+      copy(roster = Some(rr)) -> rr
+    case None =>
+      val r = Roster(slots)
+      copy(roster = Some(r)) -> r
   }
 
   /**

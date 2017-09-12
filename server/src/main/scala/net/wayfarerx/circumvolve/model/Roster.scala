@@ -26,7 +26,7 @@ package net.wayfarerx.circumvolve.model
  * @param volunteers  The roles that have been volunteered for by members.
  */
 case class Roster(
-  slots: Map[Role, Int] = Map(),
+  slots: Vector[(Role, Int)] = Vector(),
   assignments: Vector[(Member, Role)] = Vector(),
   volunteers: Vector[(Member, Role)] = Vector()) {
 
@@ -36,16 +36,19 @@ case class Roster(
    * @return a normalized copy of this roster.
    */
   def normalized: Roster = {
-    // Remove any roles with non-positive counts.
-    val normalizedSlots = for ((role, count) <- slots if count > 0) yield role -> count
+    // Sum duplicate roles and remove any roles with non-positive counts.
+    val indexedSlots = slots.groupBy(_._1).mapValues(_.map(_._2).sum).filter(_._2 > 0)
+    val normalizedSlots = for (role <- slots.map(_._1).distinct if indexedSlots.contains(role))
+      yield role -> indexedSlots(role)
 
     // Remove any unneeded roles and any superfluous assignments by role.
+    val indexedAssignments = assignments.filter(a => indexedSlots.contains(a._2)).groupBy(_._1).mapValues(_.head._2)
     val filteredAssignments = for {
-      (member, role) <- assignments if normalizedSlots.contains(role)
+      (member, role) <- assignments if indexedAssignments get member contains role
     } yield member -> role
     val boundedAssignments = for {
       (role, members) <- filteredAssignments.groupBy(_._2).mapValues(_.map(_._1))
-    } yield role -> members.take(normalizedSlots(role)).toSet
+    } yield role -> members.take(indexedSlots(role)).toSet
     val normalizedAssignments = for {
       (member, role) <- filteredAssignments if boundedAssignments(role)(member)
     } yield member -> role
@@ -53,7 +56,7 @@ case class Roster(
     // Remove any assigned volunteers or volunteers for roles that were not requested.
     val normalizedVolunteers = {
       for ((member, role) <- volunteers
-           if !normalizedAssignments.exists(_._1 == member) && normalizedSlots.contains(role))
+           if !normalizedAssignments.exists(_._1 == member) && indexedSlots.contains(role))
         yield member -> role
     }.distinct
 
