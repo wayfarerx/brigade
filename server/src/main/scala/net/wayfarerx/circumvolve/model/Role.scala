@@ -44,7 +44,7 @@ final class Role(val name: String) {
 /**
  * Factory for team roles.
  */
-object Role {
+object Role extends (String => Role) {
 
   /**
    * Creates a new role.
@@ -52,7 +52,7 @@ object Role {
    * @param name The name of the role in question.
    * @return A new role.
    */
-  def apply(name: String): Role =
+  override def apply(name: String): Role =
     new Role(name)
 
   /**

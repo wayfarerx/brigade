@@ -26,7 +26,7 @@ import org.scalatest._
 class SolverSpec extends FlatSpec with Matchers {
 
   val tank = Role("tank")
-  val healer = Role("healer")
+  val heal = Role("heal")
   val dps = Role("dps")
 
   val amy = Member("Amy")
@@ -45,54 +45,54 @@ class SolverSpec extends FlatSpec with Matchers {
   val zoe = Member("Zoe")
 
   "The solver" should "build 4-man groups" in {
-    val (_, Some(team)) = Event("dungeon")
-      .open(Map(tank -> 1, healer -> 1, dps -> 2))
+    val (_, Some(team)) = Event()
+      .open("evt", Vector(tank -> 1, heal -> 1, dps -> 2))._1
       .assign(Vector(amy -> tank))
-      .volunteer(bob, Vector(healer))
+      .volunteer(bob, Vector(heal))
       .volunteer(jim, Vector(dps))
       .volunteer(sam, Vector(dps))
-      .volunteer(sue, Vector(healer, dps))
+      .volunteer(sue, Vector(heal, dps))
       .close()
     team shouldBe Team(
-      Map(tank -> Vector(amy), healer -> Vector(bob), dps -> Vector(jim, sam)),
-      Map(sue -> Vector(healer, dps))
+      Vector(tank -> Vector(amy), heal -> Vector(bob), dps -> Vector(jim, sam)),
+      Vector(sue -> Vector(heal, dps))
     )
   }
 
   "The solver" should "build 12-man groups" in {
-    val (_, Some(team)) = Event("trial")
-      .open(Map(tank -> 2, healer -> 2, dps -> 8))
-      .assign(Vector(amy -> tank, ann -> healer, ben -> dps, bob -> dps))
+    val (_, Some(team)) = Event()
+      .open("evt", Vector(tank -> 2, heal -> 2, dps -> 8))._1
+      .assign(Vector(amy -> tank, ann -> heal, ben -> dps, bob -> dps))
       .volunteer(gus, Vector(tank))
-      .volunteer(ida, Vector(healer))
+      .volunteer(ida, Vector(heal))
       .volunteer(jim, Vector(dps))
       .volunteer(leo, Vector(dps))
       .volunteer(liz, Vector(dps))
       .volunteer(may, Vector(tank, dps))
-      .volunteer(rod, Vector(healer, dps))
+      .volunteer(rod, Vector(heal, dps))
       .volunteer(sam, Vector(dps))
       .volunteer(sue, Vector(tank, dps))
-      .volunteer(zoe, Vector(healer, dps))
+      .volunteer(zoe, Vector(heal, dps))
       .close()
     team shouldBe Team(
-      Map(tank -> Vector(amy, gus), healer -> Vector(ann, ida), dps -> Vector(ben, bob, jim, leo, liz, sam, may, rod)),
-      Map(sue -> Vector(tank, dps), zoe -> Vector(healer, dps))
+      Vector(tank -> Vector(amy, gus), heal -> Vector(ann, ida), dps -> Vector(ben, bob, jim, leo, liz, sam, may, rod)),
+      Vector(sue -> Vector(tank, dps), zoe -> Vector(heal, dps))
     )
   }
 
   "The solver" should "score candidates based on history" in {
-    val oldTeam = Team(Map(tank -> Vector(amy), healer -> Vector(ann), dps -> Vector(ben, bob)), Map())
-    val (_, Some(team)) = Event("dungeon", history = History(Vector(oldTeam)))
-      .open(Map(tank -> 1, healer -> 1, dps -> 2))
+    val oldTeam = Team(Vector(tank -> Vector(amy), heal -> Vector(ann), dps -> Vector(ben, bob)), Vector())
+    val (_, Some(team)) = Event(history = History(Vector(oldTeam)))
+      .open("evt", Vector(tank -> 1, heal -> 1, dps -> 2))._1
       .assign(Vector(amy -> tank))
-      .volunteer(ann, Vector(healer))
+      .volunteer(ann, Vector(heal))
       .volunteer(ben, Vector(dps))
       .volunteer(bob, Vector(dps))
-      .volunteer(sue, Vector(healer, dps))
+      .volunteer(sue, Vector(heal, dps))
       .close()
     team shouldBe Team(
-      Map(tank -> Vector(amy), healer -> Vector(sue), dps -> Vector(ben, bob)),
-      Map(ann -> Vector(healer))
+      Vector(tank -> Vector(amy), heal -> Vector(sue), dps -> Vector(ben, bob)),
+      Vector(ann -> Vector(heal))
     )
   }
 

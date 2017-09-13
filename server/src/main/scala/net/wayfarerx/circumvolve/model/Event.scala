@@ -29,15 +29,16 @@ case class Event(roster: Option[Roster] = None, history: History = History()) {
   /**
    * Opens this event by assigning or reassigning the available slots.
    *
-   * @param slots The slots that are available to fill in this event.
+   * @param eventId The ID assigned to the incarnation of the event.
+   * @param slots   The slots that are available to fill in this event.
    * @return A copy of this event and its new roster.
    */
-  def open(slots: Vector[(Role, Int)]): (Event, Roster) = roster match {
+  def open(eventId: String, slots: Vector[(Role, Int)]): (Event, Roster) = roster match {
     case Some(r) =>
-      val rr = r.copy(slots = slots)
+      val rr = r.copy(eventId = eventId, slots = slots)
       copy(roster = Some(rr)) -> rr
     case None =>
-      val r = Roster(slots)
+      val r = Roster(eventId, slots)
       copy(roster = Some(r)) -> r
   }
 
@@ -72,22 +73,24 @@ case class Event(roster: Option[Roster] = None, history: History = History()) {
   /**
    * Drops a member from the specified roles in this roster.
    *
-   * @param member The member that is dropping.
-   * @param roles  The roles that are being dropped.
+   * @param member       The member that is dropping.
+   * @param limitToRoles The only roles to drop or empty to drop all roles.
    * @return A copy of this roster with the specified members dropping the supplied roles.
    */
-  def drop(member: Member, roles: Vector[Role]): Event =
+  def drop(member: Member, limitToRoles: Vector[Role]): Event =
     copy(roster = roster map { r =>
-      r.copy(volunteers = r.volunteers filterNot (v => v._1 == member && roles.contains(v._2)))
+      r.copy(volunteers = r.volunteers filterNot { v =>
+        v._1 == member && (limitToRoles.isEmpty || limitToRoles.contains(v._2))
+      })
     })
 
   /**
    * Aborts this event, discarding any roster that is associated with it.
    *
-   * @return A copy of this event with no roster.
+   * @return A copy of this event with no roster with the roster that was aborted.
    */
-  def abort(): Event =
-    copy(roster = None)
+  def abort(): (Event, Option[Roster]) =
+    copy(roster = None) -> roster
 
   /**
    * Closes this event, transforming its roster into a team if it exists, aborting otherwise.

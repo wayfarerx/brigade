@@ -21,11 +21,13 @@ package net.wayfarerx.circumvolve.model
 /**
  * A roster for an event that is to be filled.
  *
+ * @param eventId     The ID assigned to the incarnation of the event.
  * @param slots       The available roles and the number of members required for each role.
  * @param assignments The assignments of specific roles to members.
  * @param volunteers  The roles that have been volunteered for by members.
  */
 case class Roster(
+  eventId: String,
   slots: Vector[(Role, Int)] = Vector(),
   assignments: Vector[(Member, Role)] = Vector(),
   volunteers: Vector[(Member, Role)] = Vector()) {
@@ -61,7 +63,7 @@ case class Roster(
     }.distinct
 
     // Create the normalized roster.
-    Roster(normalizedSlots, normalizedAssignments, normalizedVolunteers)
+    Roster(eventId, normalizedSlots, normalizedAssignments, normalizedVolunteers)
   }
 
 }
