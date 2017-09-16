@@ -14,13 +14,13 @@ Circumvolve enables administrators to ask for these roles to be filled
 and allows members to volunteer to fill those roles, all without any
 other direct human intervention.
 
- - [Initial Setup](#InitialSetup)
-   - [Inviting and Configuring](InvitingandConfiguring)
-   - [Specifying Channels](SpecifyingChannels)
- - [Managing Team Rosters](ManagingTeamRosters)
-   - [Opening a Roster](OpeningaRoster)
-   - [Aborting an Event](AbortinganEvent)
-   - [Closing a Roster](ClosingaRoster)
+ - [Initial Setup](#initial-setup)
+   - [Inviting and Configuring](#inviting-and-configuring)
+   - [Specifying Channels](#specifying-channels)
+ - [Managing Team Rosters](#managing-team-rosters)
+   - [Opening a Roster](#opening-a-roster)
+   - [Aborting an Event](#aborting-an-event)
+   - [Closing a Roster](#closing-a-roster)
 
 ## Initial Setup
 
