@@ -7,7 +7,9 @@ lazy val common = Seq(
   version := "0.2.0-SNAPSHOT",
 
   resolvers += jcenter,
-  resolvers += jitpack
+  resolvers += jitpack,
+
+  test in assembly := {}
 
 )
 
@@ -23,6 +25,9 @@ lazy val server = (project in file("server")).
     libraryDependencies += logback,
 
     libraryDependencies += akkaTest,
-    libraryDependencies += scalaTest
+    libraryDependencies += scalaTest,
+
+    mainClass in assembly := Some("net.wayfarerx.circumvolve.main.Circumvolve"),
+    assemblyJarName in assembly := "circumvolve.jar"
 
   )
