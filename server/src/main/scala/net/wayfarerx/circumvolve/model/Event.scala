@@ -29,13 +29,13 @@ case class Event(roster: Option[Roster] = None, history: History = History()) {
   /**
    * Opens this event by assigning or reassigning the available slots.
    *
-   * @param eventId The ID assigned to the incarnation of the event.
+   * @param eventId The ID assigned to any new incarnation of the event.
    * @param slots   The slots that are available to fill in this event.
    * @return A copy of this event and its new roster.
    */
   def open(eventId: String, slots: Vector[(Role, Int)]): (Event, Roster) = roster match {
     case Some(r) =>
-      val rr = r.copy(eventId = eventId, slots = slots)
+      val rr = r.copy(slots = slots)
       copy(roster = Some(rr)) -> rr
     case None =>
       val r = Roster(eventId, slots)

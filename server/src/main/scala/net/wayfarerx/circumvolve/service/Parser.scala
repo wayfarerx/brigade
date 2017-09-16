@@ -18,17 +18,17 @@
 
 package net.wayfarerx.circumvolve.service
 
-import java.util.StringTokenizer
-
 import net.wayfarerx.circumvolve.model.{Member, Role}
 
 /**
  * A wrapper around a string tokenizer that supports backtracking.
  *
- * @param buffer The stack of backtracked tokens.
- * @param tokens The sequence of remaining tokens.
+ * @param tokens The iterator of pending tokens.
  */
-final class Parser private(buffer: Vector[String], tokens: StringTokenizer) {
+final class Parser private(tokens: Iterator[Token]) {
+
+  /** The next token to return. */
+  private var pending: Option[Token] = None
 
   /**
    * Returns true if there are more tokens available.
@@ -36,25 +36,36 @@ final class Parser private(buffer: Vector[String], tokens: StringTokenizer) {
    * @return True if there are more tokens available.
    */
   def hasNext: Boolean =
-    buffer.nonEmpty || tokens.hasMoreElements
+    pending.nonEmpty || tokens.hasNext
 
   /**
-   * Returns the next parser and the next token.
+   * Returns the next token.
    *
-   * @return The next parser and the next token.
+   * @return The next token.
    */
-  def next(): (Parser, String) =
-    if (buffer.nonEmpty) new Parser(buffer.drop(1), tokens) -> buffer.head
-    else new Parser(buffer, tokens) -> tokens.nextToken()
+  def next(): Token =
+    pending match {
+      case Some(token) =>
+        pending = None
+        token
+      case None =>
+        tokens.next()
+    }
 
   /**
-   * Pushes a token onto the stack of backtracked tokens.
+   * Returns the next token if it can be transformed.
    *
-   * @param token The token to push.
-   * @return The next parser instance.
+   * @param f The function to transform the token with.
+   * @return The next token if it can be transformed.
    */
-  def push(token: String): Parser =
-    new Parser(token +: buffer, tokens)
+  def advance[T](f: Token => Option[T]): Option[T] =
+    if (!hasNext) None else {
+      val token = next()
+      f(token) orElse {
+        pending = Some(token)
+        None
+      }
+    }
 
 }
 
@@ -69,267 +80,220 @@ object Parser {
   /**
    * Parses a message and its associated meta-data.
    *
-   * @param mentions Mentioned members indexed by their various identifiers.
-   * @param message  The message text to parse.
+   * @param message The message text to parse.
    * @return The actions that were parsed from the message.
    */
-  def apply(mentions: Map[String, Member], message: String): Vector[Action] = {
+  def apply(message: String): Vector[Action] =
+    readActions(new Parser(Token.iterate(message)))
 
-    /**
-     * Scans all tokens in the parser extracting any actions found.
-     *
-     * @param result The collection of actions to append to.
-     * @param parser The parser to read tokens from.
-     * @return The collection of actions that were found.
-     */
-    @annotation.tailrec
-    def scan(result: Vector[Action], parser: Parser): Vector[Action] =
-    if (!parser.hasNext) result else {
-      val (next, token) = parser.next()
-      if (!token.startsWith(Signifier)) scan(result, next)
-      else {
-        val (last, action) = token.toLowerCase drop 1 match {
-          case "event" => readEvent(next)
-          case "drop" => readDrop(next)
-          case "help" =>
-            next -> Some(Action.Help)
-          case _ =>
-            val (pending, roles) = readRoles(Vector(Role(token drop 1)), next)
-            pending -> Some(Action.Volunteer(roles))
-        }
-        scan(action map (result :+ _) getOrElse result, last)
+  /**
+   * Attempts to read a number.
+   *
+   * @param parser The parser to read from.
+   * @return The number if one was found.
+   */
+  private def readNumber(parser: Parser): Option[Int] =
+    parser.advance {
+      case Token.Word(content) => try Some(content.toInt) catch {
+        case _: Exception => None
       }
+      case _ => None
     }
 
-    /**
-     * Attempts to read a single event action from the parser.
-     *
-     * @param parser The parser to read from.
-     * @return The next parser and any action that was found.
-     */
-    def readEvent(parser: Parser): (Parser, Option[Action]) =
-      if (!parser.hasNext) parser -> None else {
-        val (next, token) = parser.next()
-        token.toLowerCase match {
-          case "open" =>
-            val (last, slots) = readSlots(Vector(), next)
-            if (slots.isEmpty) last -> None
-            else last -> Some(Action.Open(slots))
-          case "assign" =>
-            readAssign(next)
-          case "release" =>
-            readRelease(next)
-          case "offer" =>
-            readOffer(next)
-          case "kick" =>
-            readKick(next)
-          case "abort" =>
-            next -> Some(Action.Abort)
-          case "close" =>
-            next -> Some(Action.Close)
-          case other =>
-            next.push(other) -> None
-        }
-      }
-
-    /**
-     * Attempts to read a single assign action from the parser.
-     *
-     * @param parser The parser to read from.
-     * @return The next parser and any action that was found.
-     */
-    def readAssign(parser: Parser): (Parser, Option[Action]) = {
-      val (next, assignments) = readAssignments(Vector(), parser)
-      if (assignments.isEmpty) next -> None
-      else next -> Some(Action.Assign(assignments))
+  /**
+   * Attempts to read a prefixed role.
+   *
+   * @param parser The parser to read from.
+   * @return The role if one was found.
+   */
+  private def readRole(parser: Parser): Option[Role] =
+    parser.advance {
+      case Token.Word(content) if content startsWith Signifier => Some(Role(content drop 1))
+      case _ => None
     }
 
-    /**
-     * Attempts to read a single release action from the parser.
-     *
-     * @param parser The parser to read from.
-     * @return The next parser and any action that was found.
-     */
-    def readRelease(parser: Parser): (Parser, Option[Action]) = {
-      val (next, members) = readMembers(Vector(), parser)
-      if (members.isEmpty) next -> None
-      else next -> Some(Action.Release(members.toSet))
+  /**
+   * Reads as many consecutive roles as possible from the parser.
+   *
+   * @param parser The parser to read from.
+   * @param roles  The collection of roles to append to.
+   * @return The collection of roles that were found.
+   */
+  @annotation.tailrec
+  private def readRoles(parser: Parser, roles: Vector[Role] = Vector()): Vector[Role] =
+  readRole(parser) match {
+    case Some(role) => readRoles(parser, roles :+ role)
+    case None => roles
+  }
+
+  /**
+   * Reads as many consecutive slots as possible from the parser.
+   *
+   * @param parser The parser to read from.
+   * @param slots  The collection of slots to append to.
+   * @return The collection of slots that were found.
+   */
+  @annotation.tailrec
+  private def readSlots(parser: Parser, slots: Vector[(Role, Int)] = Vector()): Vector[(Role, Int)] =
+  readRole(parser) match {
+    case Some(role) => readNumber(parser) match {
+      case Some(count) => readSlots(parser, slots :+ (role -> count))
+      case None => slots
+    }
+    case None => slots
+  }
+
+  /**
+   * Attempts to read a member.
+   *
+   * @param parser The parser to read from.
+   * @return The member if one was found.
+   */
+  private def readMember(parser: Parser): Option[Member] =
+    parser.advance {
+      case Token.Mention(id) => Some(Member(id.toString))
+      case _ => None
     }
 
-    /**
-     * Attempts to read a single offer action from the parser.
-     *
-     * @param parser The parser to read from.
-     * @return The next parser and any action that was found.
-     */
-    def readOffer(parser: Parser): (Parser, Option[Action]) = {
-      val (next, member) = readMember(parser)
-      member match {
-        case Some(m) =>
-          val (last, roles) = readRoles(Vector(), next)
-          if (roles.isEmpty) last -> None
-          else last -> Some(Action.Offer(m, roles))
-        case None =>
-          next -> None
-      }
+  /**
+   * Reads as many consecutive members as possible from the parser.
+   *
+   * @param parser  The parser to read from.
+   * @param members The collection of members to append to.
+   * @return The collection of members that were found.
+   */
+  @annotation.tailrec
+  private def readMembers(parser: Parser, members: Vector[Member] = Vector()): Vector[Member] =
+  readMember(parser) match {
+    case Some(member) => readMembers(parser, members :+ member)
+    case None => members
+  }
+
+  /**
+   * Reads as many consecutive assignments as possible from the parser.
+   *
+   * @param parser      The parser to read from.
+   * @param assignments The collection of assignments to append to.
+   * @return The collection of assignments that were found.
+   */
+  @annotation.tailrec
+  private def readAssignments(parser: Parser, assignments: Vector[(Member, Role)] = Vector()): Vector[(Member, Role)] =
+  readMember(parser) match {
+    case Some(member) => readRole(parser) match {
+      case Some(role) => readAssignments(parser, assignments :+ (member -> role))
+      case None => assignments
+    }
+    case None => assignments
+  }
+
+  /**
+   * Attempts to read a single open action from the parser.
+   *
+   * @param parser The parser to read from.
+   * @return Any action that was found.
+   */
+  def readOpen(parser: Parser): Option[Action] = {
+    val slots = readSlots(parser)
+    if (slots.isEmpty) None
+    else Some(Action.Open(slots))
+  }
+
+  /**
+   * Attempts to read a single assign action from the parser.
+   *
+   * @param parser The parser to read from.
+   * @return Any action that was found.
+   */
+  def readAssign(parser: Parser): Option[Action] = {
+    val assignments = readAssignments(parser)
+    if (assignments.isEmpty) None
+    else Some(Action.Assign(assignments))
+  }
+
+  /**
+   * Attempts to read a single release action from the parser.
+   *
+   * @param parser The parser to read from.
+   * @return Any action that was found.
+   */
+  def readRelease(parser: Parser): Option[Action] = {
+    val members = readMembers(parser)
+    if (members.isEmpty) None
+    else Some(Action.Release(members.toSet))
+  }
+
+  /**
+   * Attempts to read a single offer action from the parser.
+   *
+   * @param parser The parser to read from.
+   * @return Any action that was found.
+   */
+  def readOffer(parser: Parser): Option[Action] =
+    readMember(parser) flatMap { member =>
+      val roles = readRoles(parser)
+      if (roles.isEmpty) None
+      else Some(Action.Offer(member, roles))
     }
 
-    /**
-     * Attempts to read a single drop action from the parser.
-     *
-     * @param parser The parser to read from.
-     * @return The next parser and any action that was found.
-     */
-    def readKick(parser: Parser): (Parser, Option[Action]) = {
-      val (next, member) = readMember(parser)
-      member match {
-        case Some(m) =>
-          val (last, roles) = readRoles(Vector(), next)
-          last -> Some(Action.Kick(m, roles))
-        case None =>
-          next -> None
-      }
+  /**
+   * Attempts to read a single drop action from the parser.
+   *
+   * @param parser The parser to read from.
+   * @return Any action that was found.
+   */
+  def readKick(parser: Parser): Option[Action] =
+    readMember(parser) map (Action.Kick(_, readRoles(parser)))
+
+
+  /**
+   * Attempts to read a single drop action from the parser.
+   *
+   * @param parser The parser to read from.
+   * @return Any action that was found.
+   */
+  def readDrop(parser: Parser): Option[Action] =
+    Some(Action.Drop(readRoles(parser)))
+
+  /**
+   * Attempts to read a single event action from the parser.
+   *
+   * @param parser The parser to read from.
+   * @return Any action that was found.
+   */
+  def readAction(parser: Parser): Option[Action] =
+    parser.advance {
+      case Token.Word(content) if content startsWith Signifier => Some(content.drop(1).toLowerCase)
+      case _ => None
+    } filterNot (_.isEmpty) flatMap {
+      case "help" => Some(Action.Help)
+      case "open" => readOpen(parser)
+      case "abort" => Some(Action.Abort)
+      case "close" => Some(Action.Close)
+      case "assign" => readAssign(parser)
+      case "release" => readRelease(parser)
+      case "offer" => readOffer(parser)
+      case "kick" => readKick(parser)
+      case "drop" => readDrop(parser)
+      case role => Some(Action.Volunteer(readRoles(parser, Vector(Role(role)))))
     }
 
-
-    /**
-     * Attempts to read a single drop action from the parser.
-     *
-     * @param parser The parser to read from.
-     * @return The next parser and any action that was found.
-     */
-    def readDrop(parser: Parser): (Parser, Option[Action]) = {
-      val (next, roles) = readRoles(Vector(), parser)
-      next -> Some(Action.Drop(roles))
-    }
-
-    /**
-     * Reads as many consecutive slots as possible from the parser.
-     *
-     * @param slots  The collection of slots to append to.
-     * @param parser The parser to read from.
-     * @return The next parser and the collection of slots that were found.
-     */
-    @annotation.tailrec
-    def readSlots(slots: Vector[(Role, Int)], parser: Parser): (Parser, Vector[(Role, Int)]) = {
-      val (next, role) = readRole(parser)
-      role match {
-        case Some(r) =>
-          val (last, count) = readNumber(next)
-          count match {
-            case Some(c) =>
-              readSlots(slots :+ (r -> c), last)
-            case None =>
-              last -> slots
-          }
-        case None =>
-          next -> slots
-      }
-    }
-
-    /**
-     * Attempts to read a number.
-     *
-     * @param parser The parser to read from.
-     * @return The next parser and the number if one was found.
-     */
-    def readNumber(parser: Parser): (Parser, Option[Int]) =
-      if (!parser.hasNext) parser -> None else {
-        val (next, token) = parser.next()
-        try next -> Some(token.toInt) catch {
-          case _: Exception => next.push(token) -> None
-        }
-      }
-
-    /**
-     * Attempts to read a member.
-     *
-     * @param parser The parser to read from.
-     * @return The next parser and the member if one was found.
-     */
-    def readMember(parser: Parser): (Parser, Option[Member]) =
-      if (!parser.hasNext) parser -> None else {
-        val (next, token) = parser.next()
-        mentions get token match {
-          case Some(member) => next -> Some(member)
-          case None => next.push(token) -> None
-        }
-      }
-
-    /**
-     * Reads as many consecutive members as possible from the parser.
-     *
-     * @param members The collection of members to append to.
-     * @param parser  The parser to read from.
-     * @return The next parser and the collection of members that were found.
-     */
-    @annotation.tailrec
-    def readMembers(members: Vector[Member], parser: Parser): (Parser, Vector[Member]) = {
-      val (next, member) = readMember(parser)
-      member match {
-        case Some(m) =>
-          readMembers(members :+ m, next)
-        case None =>
-          next -> members
-      }
-    }
-
-    /**
-     * Attempts to read a prefixed role.
-     *
-     * @param parser The parser to read from.
-     * @return The next parser and the role if one was found.
-     */
-    def readRole(parser: Parser): (Parser, Option[Role]) =
-      if (!parser.hasNext) parser -> None else {
-        val (next, token) = parser.next()
-        if (token startsWith Signifier) next -> Some(Role(token drop 1))
-        else next.push(token) -> None
-      }
-
-    /**
-     * Reads as many consecutive roles as possible from the parser.
-     *
-     * @param roles  The collection of roles to append to.
-     * @param parser The parser to read from.
-     * @return The next parser and the collection of roles that were found.
-     */
-    @annotation.tailrec
-    def readRoles(roles: Vector[Role], parser: Parser): (Parser, Vector[Role]) = {
-      val (next, member) = readRole(parser)
-      member match {
-        case Some(r) =>
-          readRoles(roles :+ r, next)
-        case None =>
-          next -> roles
-      }
-    }
-
-    /**
-     * Reads as many consecutive assignments as possible from the parser.
-     *
-     * @param assignments The collection of assignments to append to.
-     * @param parser      The parser to read from.
-     * @return The next parser and the collection of assignments that were found.
-     */
-    @annotation.tailrec
-    def readAssignments(assignments: Vector[(Member, Role)], parser: Parser): (Parser, Vector[(Member, Role)]) = {
-      val (next, member) = readMember(parser)
-      member match {
-        case Some(m) =>
-          val (last, role) = readRole(next)
-          role match {
-            case Some(r) =>
-              readAssignments(assignments :+ (m -> r), last)
-            case None =>
-              last -> assignments
-          }
-        case None =>
-          next -> assignments
-      }
-    }
-
-    scan(Vector(), new Parser(Vector(), new StringTokenizer(message)))
+  /**
+   * Scans all tokens in the parser extracting any actions found.
+   *
+   * @param parser  The parser to read tokens from.
+   * @param actions The collection of actions to append to.
+   * @return The collection of actions that were found.
+   */
+  @annotation.tailrec
+  def readActions(parser: Parser, actions: Vector[Action] = Vector()): Vector[Action] =
+  readAction(parser) match {
+    case Some(action) =>
+      readActions(parser, actions :+ action)
+    case None if parser.hasNext =>
+      parser.next()
+      readActions(parser, actions)
+    case None =>
+      actions
   }
 
 }
