@@ -18,9 +18,6 @@
 
 package net.wayfarerx.circumvolve.service
 
-import java.text.SimpleDateFormat
-import java.util.{Date, Locale}
-
 import akka.actor.{Actor, Props}
 import akka.event.Logging
 
@@ -38,9 +35,6 @@ final class Guild(guildId: String, storage: Storage) extends Actor {
 
   /** Logging support. */
   private val log = Logging(context.system, this)
-
-  /** A formatter for team IDs. */
-  private val teamIdFormat = new SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.US)
 
   /** The events currently loaded for this guild. */
   private var events = Map[String, Event]()
@@ -94,8 +88,9 @@ final class Guild(guildId: String, storage: Storage) extends Actor {
     val old = loadEvent(channelId)
     val (tmp, team) = old.close()
     val event = tmp.copy(history = History(tmp.history.teams.take(MaxHistory)))
+    val teamId = String.valueOf(Long.MaxValue - System.currentTimeMillis())
+    team foreach (storage.putTeam(guildId, channelId, "0" * (20 - teamId.length) + teamId, _))
     storage.deleteRoster(guildId, channelId)
-    team foreach (storage.putTeam(guildId, channelId, teamIdFormat.format(new Date()), _))
     events += channelId -> event
     for {
       r <- old.roster

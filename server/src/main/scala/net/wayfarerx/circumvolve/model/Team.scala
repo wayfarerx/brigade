@@ -43,4 +43,28 @@ case class Team(members: Vector[(Role, Vector[Member])], backups: Vector[(Member
         members :+ (role, Vector(member))
     })
 
+  /**
+   * Writes this team to a string.
+   *
+   * @return This team written to a string.
+   */
+  def write(): String =
+    writeJson[Team](this)
+
+}
+
+/**
+ * Factory for team objects.
+ */
+object Team {
+
+  /**
+   * Reads a team from a string.
+   *
+   * @param string The string to read from.
+   * @return The team that was read.
+   */
+  def read(string: String): Team =
+    readJson[Team](string)
+
 }

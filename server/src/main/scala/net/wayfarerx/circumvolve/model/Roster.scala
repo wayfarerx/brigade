@@ -66,4 +66,28 @@ case class Roster(
     Roster(eventId, normalizedSlots, normalizedAssignments, normalizedVolunteers)
   }
 
+  /**
+   * Writes this roster to a string.
+   *
+   * @return This roster written to a string.
+   */
+  def write(): String =
+    writeJson[Roster](this)
+
+}
+
+/**
+ * Factory for roster objects.
+ */
+object Roster {
+
+  /**
+   * Reads a roster from a string.
+   *
+   * @param string The string to read from.
+   * @return The roster that was read.
+   */
+  def read(string: String): Roster =
+    readJson[Roster](string)
+
 }
