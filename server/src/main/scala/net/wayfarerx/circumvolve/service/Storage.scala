@@ -18,10 +18,11 @@
 
 package net.wayfarerx.circumvolve.service
 
+import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
+import com.amazonaws.regions.Regions
+
 import collection.JavaConverters._
-
 import com.amazonaws.services.s3.model.ListObjectsRequest
-
 import net.wayfarerx.circumvolve.model.{Roster, Team}
 
 /**
@@ -120,10 +121,11 @@ object Storage {
   /**
    * A storage implementation that loads and saves using AWS S3.
    */
-  final class S3Storage(bucket: String, path: String) extends Storage {
+  final class S3Storage(bucket: String, path: String, accessKey: String, secretKey: String) extends Storage {
 
     /** The S3 client to use. */
-    private val s3 = com.amazonaws.services.s3.AmazonS3ClientBuilder.defaultClient
+    private val s3 = com.amazonaws.services.s3.AmazonS3ClientBuilder.standard.withRegion(Regions.US_WEST_2)
+      .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey))).build()
 
     /* Load a roster from '<bucket>/<path>/<guildId>/<channelId>/roster.json'. */
     override def getRoster(guildId: String, channelId: String): Option[Roster] =
@@ -160,8 +162,8 @@ object Storage {
         try {
           Some(s3.getObjectAsString(bucket, key))
         } catch {
-          case _: Exception =>
-            // TODO log
+          case e: Exception =>
+            e.printStackTrace() // TODO log
             None
         }
       }
@@ -169,15 +171,15 @@ object Storage {
     /**
      * Writes the entire content of a string to an S3 object.
      *
-     * @param key The path to the S3 object.
+     * @param key  The path to the S3 object.
      * @param data The data to write to the S3 object.
      */
     private def write(key: String, data: String): Unit =
       try {
         s3.putObject(bucket, key, data)
       } catch {
-        case _: Exception =>
-        // TODO log
+        case e: Exception =>
+          e.printStackTrace() // TODO log
       }
 
     /**
@@ -189,15 +191,15 @@ object Storage {
       try {
         s3.deleteObject(bucket, key)
       } catch {
-        case _: Exception =>
-        // TODO log
+        case e: Exception =>
+          e.printStackTrace() // TODO log
       }
 
     /**
      * Lists the keys under the specified prefix.
      *
      * @param prefix The prefix to list keys under.
-     * @param count The maximum number of keys to list.
+     * @param count  The maximum number of keys to list.
      * @return The keys under the specified prefix.
      */
     private def list(prefix: String, count: Int): Vector[String] =
@@ -205,8 +207,8 @@ object Storage {
         s3.listObjects(new ListObjectsRequest().withBucketName(bucket).withPrefix(prefix).withMaxKeys(count))
           .getObjectSummaries.asScala.map(_.getKey.substring(prefix.length)).toVector
       } catch {
-        case _: Exception =>
-          // TODO log
+        case e: Exception =>
+          e.printStackTrace() // TODO log
           Vector()
       }
 

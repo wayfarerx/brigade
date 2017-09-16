@@ -53,7 +53,7 @@ object Messages {
   /**
    * The message displayed when the attempt to build a tem is aborted.
    *
-   * @param guild The Discord guild to look up users with.
+   * @param guild  The Discord guild to look up users with.
    * @param roster The roster to be filled.
    * @param team   The team selected to fill the roster.
    * @return The message displayed when the attempt to build a tem is aborted.
@@ -75,18 +75,31 @@ object Messages {
       for (_ <- 0 until max - label.length) builder.append(' ')
       member match {
         case Some(m) =>
-          builder.append("@")
           builder.append(guild.getClient.getUserByID(m.id.toLong).getDisplayName(guild))
         case None =>
-          builder.append("unassigned")
+          builder.append("--")
       }
     }
-    builder.append("```\r\n").toString
+    builder.append("```\r\n")
+    if (team.backups.nonEmpty) {
+      builder.append("Here's the folks registered as backups:```")
+      for ((member, roles) <- team.backups) {
+        builder.append("\r\n")
+        builder.append(guild.getClient.getUserByID(member.id.toLong).getDisplayName(guild))
+        builder.append(":")
+        roles foreach { role =>
+          builder.append(role)
+          builder.append(' ')
+        }
+      }
+      builder.append("```\r\n")
+    }
+    builder.toString
   }
 
   /** The message displayed in response to the help action. */
   def help: String =
-    """hi, I'm the Circumvolve team builder, built by the inimitable wayfarerx.
+    """hi, I'm the Circumvolve team builder, progeny of the inimitable wayfarerx.
       |I see you already set up this channel to build teams, good work! Here's the commands you can use:
       |```
       | !open (!role count)+     -- Sets up the team roster.

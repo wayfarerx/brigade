@@ -36,15 +36,18 @@ object Circumvolve {
    * @param args The command-line arguments.
    */
   def main(args: Array[String]): Unit =
-    if (args.length != 1 || args.length != 3) {
-      println("Usage: circumvolve LOGIN_TOKEN (S3_BUCKET, S3_PATH)")
-      println("  LOGIN_TOKEN The token to log in to Discord with.")
-      println("  S3_BUCKET   The S3 bucket to use for storage (optional).")
-      println("  S3_PATH     The S3 key prefix to use for storage (optional).")
+    if (args.length != 1 && args.length != 5) {
+      println("Usage: circumvolve LOGIN_TOKEN (S3_BUCKET S3_PATH, S3_ACCESS_KEY S3_SECRET_KEY)")
+      println("  LOGIN_TOKEN   The token to log in to Discord with.")
+      println("  S3_BUCKET     The S3 bucket to use for storage (optional).")
+      println("  S3_PATH       The S3 key prefix to use for storage (optional).")
+      println("  S3_ACCESS_KEY The S3 access key to use for storage (optional).")
+      println("  S3_SECRET_KEY The S3 secret key to use for storage (optional).")
       System.exit(1)
     } else {
       val token = args(0)
-      val storage = if (args.length == 1) Storage.Empty else new Storage.S3Storage(args(1), args(2))
+      val storage = if (args.length == 1) Storage.Empty else
+        new Storage.S3Storage(args(1), trimS3Path(args(2)), args(3), args(4))
       // S3 Stuffs
       var result = 1
       try {
@@ -71,5 +74,17 @@ object Circumvolve {
     case Some(_) => waitForExit(reader)
     case None => 0
   }
+
+  /**
+   * Trims all leading and trailing slashes on S3 paths.
+   *
+   * @param path The path to trim.
+   * @return The trimmed path.
+   */
+  @annotation.tailrec
+  private def trimS3Path(path: String): String =
+    if (path startsWith "/") trimS3Path(path substring 1)
+    else if (path endsWith "/") trimS3Path(path.substring(0, path.length - 1))
+    else path
 
 }
