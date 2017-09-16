@@ -36,19 +36,21 @@ object Circumvolve {
    * @param args The command-line arguments.
    */
   def main(args: Array[String]): Unit =
-    if (args.length == 0 || args.length > 1) {
-      println("Usage: circumvolve LOGIN_TOKEN (STORAGE_DIRECTORY)")
+    if (args.length != 1 || args.length != 3) {
+      println("Usage: circumvolve LOGIN_TOKEN (S3_BUCKET, S3_PATH)")
       println("  LOGIN_TOKEN The token to log in to Discord with.")
-      println("  STORAGE_DIRECTORY The optional directory to store event data in.")
+      println("  S3_BUCKET   The S3 bucket to use for storage (optional).")
+      println("  S3_PATH     The S3 key prefix to use for storage (optional).")
       System.exit(1)
     } else {
       val token = args(0)
+      val storage = if (args.length == 1) Storage.Empty else new Storage.S3Storage(args(1), args(2))
       // S3 Stuffs
       var result = 1
       try {
         val system = ActorSystem("circumvolve")
         try {
-          system.actorOf(Connection(token, Storage.Empty), "connection")
+          system.actorOf(Connection(token, storage), "connection")
           result = waitForExit(new BufferedReader(new InputStreamReader(System.in)))
         } catch {
           case e: IOException => System.err.println(e.getMessage)
