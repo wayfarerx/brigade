@@ -92,4 +92,13 @@ object Command {
    */
   case class Drop(channelId: String, member: Member, limitToRoles: Vector[Role]) extends Command
 
+  /**
+   * Queries the roles a member has volunteered for in the in-progress roster.
+   *
+   * @param channelId The ID of the channel this command pertains to.
+   * @param messageId The ID of the message that contained the query.
+   * @param member    The member to query the volunteered roles for.
+   */
+  case class Query(channelId: String, messageId: String, member: Member) extends Command
+
 }

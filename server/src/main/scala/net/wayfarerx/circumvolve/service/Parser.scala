@@ -254,6 +254,16 @@ object Parser {
   def readDrop(parser: Parser): Option[Action] =
     Some(Action.Drop(readRoles(parser)))
 
+
+  /**
+   * Attempts to read a single query action from the parser.
+   *
+   * @param parser The parser to read from.
+   * @return Any action that was found.
+   */
+  def readQuery(parser: Parser): Option[Action] =
+    Some(Action.Query(readMember(parser)))
+
   /**
    * Attempts to read a single event action from the parser.
    *
@@ -274,6 +284,7 @@ object Parser {
       case "offer" => readOffer(parser)
       case "kick" => readKick(parser)
       case "drop" => readDrop(parser)
+      case "?" => readQuery(parser)
       case role => Some(Action.Volunteer(readRoles(parser, Vector(Role(role)))))
     }
 

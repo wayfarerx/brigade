@@ -48,6 +48,7 @@ final class Guild(guildId: String, storage: Storage) extends Actor {
     case Command.Release(channelId, members) => onRelease(channelId, members)
     case Command.Volunteer(channelId, member, roles) => onVolunteer(channelId, member, roles)
     case Command.Drop(channelId, member, roles) => onDrop(channelId, member, roles)
+    case Command.Query(channelId, messageId, member) => onQuery(channelId, messageId, member)
   }
 
   /**
@@ -166,6 +167,19 @@ final class Guild(guildId: String, storage: Storage) extends Actor {
       r <- event.roster
       t <- event.close()._2
     } sender ! Status.Updated(guildId, channelId, r.eventId, r, t)
+  }
+
+  /**
+   * Queried the roles that a member has volunteered for.
+   *
+   * @param channelId The channel of the event to query.
+   * @param messageId The ID of the message that contained the query.
+   * @param member    The member being queried.
+   */
+  private def onQuery(channelId: String, messageId: String, member: Member): Unit = {
+    log.debug(s"Dropping $member from event for $guildId/$channelId.")
+    val roles = loadEvent(channelId).roster map (_.volunteers.filter(_._1 == member).map(_._2).distinct)
+    sender ! Status.Response(guildId, channelId, messageId, member, roles getOrElse Vector())
   }
 
   /**

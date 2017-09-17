@@ -92,6 +92,13 @@ object Action {
   case class Drop(limitToRoles: Vector[Role]) extends Action
 
   /**
+   * Queries the roles a has volunteered for.
+   *
+   * @param member The member to query or none to query the author.
+   */
+  case class Query(member: Option[Member]) extends Action
+
+  /**
    * An action that prints the help message.
    */
   case object Help extends Action

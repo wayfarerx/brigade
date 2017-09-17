@@ -18,10 +18,10 @@
 
 package net.wayfarerx.circumvolve.service
 
-import net.wayfarerx.circumvolve.model.{Roster, Team}
+import net.wayfarerx.circumvolve.model.{Member, Role, Roster, Team}
 
 /**
- * Base class for messages sent to the UI that describe the currently available team.
+ * Base class for messages sent to the UI.
  */
 sealed trait Status {
 
@@ -31,8 +31,8 @@ sealed trait Status {
   /** The ID of the channel this status pertains to. */
   def channelId: String
 
-  /** The ID of the event this status pertains to. */
-  def eventId: String
+  /** The ID of the message this status pertains to. */
+  def messageId: String
 
 }
 
@@ -42,45 +42,65 @@ sealed trait Status {
 object Status {
 
   /**
+   * A message sent to the UI after a member's roles are queried.
+   *
+   * @param guildId   The ID of the guild this status pertains to.
+   * @param channelId The ID of the channel this status pertains to.
+   * @param messageId The ID of the message this status pertains to.
+   * @param member    The member that was queried.
+   * @param roles     The roles that the queried member has volunteered for.
+   */
+  case class Response(guildId: String, channelId: String, messageId: String,
+    member: Member, roles: Vector[Role]) extends Status
+
+  /**
+   * Base class for messages sent to the UI that describe the currently available team.
+   */
+  sealed trait TeamStatus extends Status
+
+  /**
    * A message sent to the UI after an event opens.
    *
-   * @param guildId The ID of the guild this status pertains to.
+   * @param guildId   The ID of the guild this status pertains to.
    * @param channelId The ID of the channel this status pertains to.
-   * @param eventId The ID of the event this status pertains to.
-   * @param roster The roster for the event.
-   * @param team The team assembled for the event.
+   * @param messageId The ID of the message this status pertains to.
+   * @param roster    The roster for the event.
+   * @param team      The team assembled for the event.
    */
-  case class Opened(guildId: String, channelId: String, eventId: String, roster: Roster, team: Team) extends Status
+  case class Opened(guildId: String, channelId: String, messageId: String, roster: Roster, team: Team)
+    extends TeamStatus
 
   /**
    * A message sent to the UI after an event is updated.
    *
-   * @param guildId The ID of the guild this status pertains to.
+   * @param guildId   The ID of the guild this status pertains to.
    * @param channelId The ID of the channel this status pertains to.
-   * @param eventId The ID of the event this status pertains to.
-   * @param roster The roster for the event.
-   * @param team The team assembled for the event.
+   * @param messageId The ID of the message this status pertains to.
+   * @param roster    The roster for the event.
+   * @param team      The team assembled for the event.
    */
-  case class Updated(guildId: String, channelId: String, eventId: String, roster: Roster, team: Team) extends Status
+  case class Updated(guildId: String, channelId: String, messageId: String, roster: Roster, team: Team)
+    extends TeamStatus
 
   /**
    * A message sent to the UI after an event is closed.
    *
-   * @param guildId The ID of the guild this status pertains to.
+   * @param guildId   The ID of the guild this status pertains to.
    * @param channelId The ID of the channel this status pertains to.
-   * @param eventId The ID of the event this status pertains to.
-   * @param roster The roster for the event.
-   * @param team The team assembled for the event.
+   * @param messageId The ID of the message this status pertains to.
+   * @param roster    The roster for the event.
+   * @param team      The team assembled for the event.
    */
-  case class Closed(guildId: String, channelId: String, eventId: String, roster: Roster, team: Team) extends Status
+  case class Closed(guildId: String, channelId: String, messageId: String, roster: Roster, team: Team)
+    extends TeamStatus
 
   /**
    * A message sent to the UI after an event is aborted.
    *
-   * @param guildId The ID of the guild this status pertains to.
+   * @param guildId   The ID of the guild this status pertains to.
    * @param channelId The ID of the channel this status pertains to.
-   * @param eventId The ID of the event this status pertains to.
+   * @param messageId The ID of the message this status pertains to.
    */
-  case class Aborted(guildId: String, channelId: String, eventId: String) extends Status
+  case class Aborted(guildId: String, channelId: String, messageId: String) extends TeamStatus
 
 }

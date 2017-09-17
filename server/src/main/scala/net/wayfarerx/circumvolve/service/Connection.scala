@@ -148,6 +148,8 @@ class Connection(token: String, storage: Storage) extends Actor {
           guild ! Command.Volunteer(channelId, author, roles)
         case Action.Drop(roles) =>
           guild ! Command.Drop(channelId, author, roles)
+        case Action.Query(member) =>
+          guild ! Command.Query(channelId, event.getMessage.getStringID, member getOrElse author)
         case Action.Help =>
           event.getMessage.reply(Messages.help)
         case _ =>
@@ -199,22 +201,27 @@ class Connection(token: String, storage: Storage) extends Actor {
    */
   private def onStatus(status: Status): Unit = {
     client foreach { discord =>
-      val eventId = status.eventId.toLong
-      val message = discord.getMessageByID(eventId)
-      (status match {
-        case Status.Opened(_, _, _, roster, team) => Some(roster -> team)
-        case Status.Updated(_, _, _, roster, team) => Some(roster -> team)
-        case Status.Closed(_, _, _, roster, team) => Some(roster -> team)
-        case Status.Aborted(_, _, _) => None
-      }) match {
-        case Some((roster, team)) =>
-          message.edit(Messages.show(message.getGuild, roster, team))
-        case None =>
-          message.edit(Messages.aborted)
+      val messageId = status.messageId.toLong
+      val message = discord.getMessageByID(messageId)
+      status match {
+        case Status.Response(_, _, _, member, roles) =>
+          message.reply(Messages.queryResponse(message.getGuild, member, roles))
+        case rosterStatus: Status.TeamStatus =>
+          (rosterStatus match {
+            case Status.Opened(_, _, _, roster, team) => Some(roster -> team)
+            case Status.Updated(_, _, _, roster, team) => Some(roster -> team)
+            case Status.Closed(_, _, _, roster, team) => Some(roster -> team)
+            case Status.Aborted(_, _, _) => None
+          }) match {
+            case Some((roster, team)) =>
+              message.edit(Messages.show(message.getGuild, roster, team))
+            case None =>
+              message.edit(Messages.aborted)
+          }
+          val channelId = message.getChannel.getLongID
+          messages get channelId foreach (_ - messageId foreach (discord.getMessageByID(_).delete()))
+          messages -= channelId
       }
-      val channelId = message.getChannel.getLongID
-      messages get channelId foreach (_ - eventId foreach (discord.getMessageByID(_).delete()))
-      messages -= channelId
     }
   }
 
