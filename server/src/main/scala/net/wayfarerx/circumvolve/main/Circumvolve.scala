@@ -18,7 +18,7 @@
 
 package net.wayfarerx.circumvolve.main
 
-import java.io.{BufferedReader, File, IOException, InputStreamReader}
+import java.io.{BufferedReader, InputStreamReader}
 
 import concurrent.Await
 import concurrent.duration._
@@ -36,55 +36,49 @@ object Circumvolve {
    * @param args The command-line arguments.
    */
   def main(args: Array[String]): Unit =
-    if (args.length != 1 && args.length != 5) {
-      println("Usage: circumvolve LOGIN_TOKEN (S3_BUCKET S3_PATH, S3_ACCESS_KEY S3_SECRET_KEY)")
-      println("  LOGIN_TOKEN   The token to log in to Discord with.")
-      println("  S3_BUCKET     The S3 bucket to use for storage (optional).")
-      println("  S3_PATH       The S3 key prefix to use for storage (optional).")
-      println("  S3_ACCESS_KEY The S3 access key to use for storage (optional).")
-      println("  S3_SECRET_KEY The S3 secret key to use for storage (optional).")
+    if (args.length != 0 && args.length != 2) {
+      println("Usage: circumvolve (S3_BUCKET S3_PATH)")
+      println("  The Discord login token must be provided on the system input stream: cat token.txt | circumvolve ...")
+      println("  S3_BUCKET     The S3 bucket to use for storage (only if using S3).")
+      println("  S3_PATH       The S3 key prefix to use for storage (only if using S3).")
       System.exit(1)
     } else {
-      val token = args(0)
       val storage = if (args.length == 1) Storage.Empty else
-        new Storage.S3Storage(args(1), trimS3Path(args(2)), args(3), args(4))
-      // S3 Stuffs
+        new Storage.S3Storage(args(0), normalizeS3Path(args(1)))
       var result = 1
       try {
         val system = ActorSystem("circumvolve")
+        sys.runtime.addShutdownHook(new Thread() {
+          override def run(): Unit = Await.result(system.terminate(), 10.seconds)
+        })
         try {
+          val token = new BufferedReader(new InputStreamReader(System.in)).readLine()
           system.actorOf(Connection(token, storage), "connection")
-          result = waitForExit(new BufferedReader(new InputStreamReader(System.in)))
+          result = 0
         } catch {
-          case e: IOException => System.err.println(e.getMessage)
-        } finally Await.result(system.terminate(), 10.seconds)
-      } finally System.exit(result)
+          case e: Exception => e.printStackTrace()
+        } finally if (result != 0) Await.result(system.terminate(), 10.seconds)
+      } finally if (result != 0) System.exit(result)
     }
 
   /**
-   * Waits until told to exit or the system input stream ends.
-   *
-   * @param reader The reader to read lines from.
-   * @return The normal exit code.
-   */
-  @annotation.tailrec
-  private def waitForExit(reader: BufferedReader): Int =
-  Option(reader.readLine()) match {
-    case Some(line) if line.trim equalsIgnoreCase "exit" => 0
-    case Some(_) => waitForExit(reader)
-    case None => 0
-  }
-
-  /**
-   * Trims all leading and trailing slashes on S3 paths.
+   * Trims all leading and trailing slashes on S3 paths and replaces back slashes with forward slashes.
    *
    * @param path The path to trim.
    * @return The trimmed path.
    */
   @annotation.tailrec
-  private def trimS3Path(path: String): String =
-    if (path startsWith "/") trimS3Path(path substring 1)
-    else if (path endsWith "/") trimS3Path(path.substring(0, path.length - 1))
-    else path
+  private def normalizeS3Path(path: CharSequence): String =
+  if (path.length == 0) "" else path charAt 0 match {
+    case '/' | '\\' => normalizeS3Path(path.subSequence(1, path.length()))
+    case _ => path charAt path.length - 1 match {
+      case '/' | '\\' => normalizeS3Path(path.subSequence(0, path.length - 1))
+      case _ => path.toString.replace('\\', '/')
+    }
+  }
+
+  /*else if (path.charAt(0) == '/') trimS3Path(path.subSequence(1, path.length()))
+  else if (path.charAt(path.length - 1) == '/') trimS3Path(path.subSequence(0, path.length - 1))
+  else path*/
 
 }

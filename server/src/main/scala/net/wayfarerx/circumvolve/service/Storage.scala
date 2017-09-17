@@ -18,7 +18,6 @@
 
 package net.wayfarerx.circumvolve.service
 
-import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
 import com.amazonaws.regions.Regions
 
 import collection.JavaConverters._
@@ -121,11 +120,10 @@ object Storage {
   /**
    * A storage implementation that loads and saves using AWS S3.
    */
-  final class S3Storage(bucket: String, path: String, accessKey: String, secretKey: String) extends Storage {
+  final class S3Storage(bucket: String, path: String) extends Storage {
 
     /** The S3 client to use. */
-    private val s3 = com.amazonaws.services.s3.AmazonS3ClientBuilder.standard.withRegion(Regions.US_WEST_2)
-      .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey))).build()
+    private val s3 = com.amazonaws.services.s3.AmazonS3ClientBuilder.standard.withRegion(Regions.US_WEST_2).build()
 
     /* Load a roster from '<bucket>/<path>/<guildId>/<channelId>/roster.json'. */
     override def getRoster(guildId: String, channelId: String): Option[Roster] =
