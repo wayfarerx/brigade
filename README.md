@@ -420,7 +420,7 @@ of this bot might allow for more customization in this regard.
 
 ## Upcoming Features
 
-As cool as circumvolve is, it could always do more:
+As cool as Circumvolve is, it could always do more:
 
  - [Allowing guild owners or administrators to influence the historical
    scoring algorithm on a per-channel basis.](https://github.com/wayfarerx/circumvolve/issues/3)

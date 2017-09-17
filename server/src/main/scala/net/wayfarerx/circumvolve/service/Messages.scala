@@ -100,20 +100,22 @@ object Messages {
   /** The message displayed in response to the help action. */
   def help: String =
     """hi, I'm the Circumvolve team builder, progeny of the inimitable wayfarerx.
-      |I see you already set up this channel to build teams, good work! Here's the commands you can use:
+      |I see this channel has been set up to build teams, good work! Here's the commands you can use:
       |```
-      | !open (!role count)+     -- Sets up the team roster.
+      | !open (!ROLE COUNT)+     -- Sets up the team roster.
       | !abort                   -- Abandons the roster and does not build a team.
       | !close                   -- Closes the roster and finalizes a team.
-      | !assign (member !role)+  -- Assigns members to roles in the team.
-      | !release member+         -- Releases previously assigned members.
-      | !offer member !role+     -- Volunteers a member for one or more roles.
-      | !kick member !role*      -- Kicks a member from one or more roles (or all roles if you don't list any).```
+      | !assign (@USER !ROLE)+   -- Assigns members to roles in the team.
+      | !release @USER+          -- Releases previously assigned members.
+      | !offer @USER !ROLE+      -- Volunteers a member for one or more roles.
+      | !kick @USER !ROLE*       -- Kicks a member from one or more roles (or all roles if you don't list any).```
       |Note that you have to be an event administrator to use the above commands. Here's the commands for everyone:
       |```
-      | !role+                   -- Volunteers YOU for one or more roles.
-      | !drop !role*             -- Drops YOU from one or more roles (or all roles if you don't list any).
+      | !ROLE+                   -- Volunteers YOU for one or more roles.
+      | !drop !ROLE*             -- Drops YOU from one or more roles (or all roles if you don't list any).
+      | !? @USER?                -- Lists the roles that @USER has volunteered for or YOUR roles if @USER is omitted.
       | !help                    -- Repeats this message for whenever you feel like you miss me.```
+      |For a more detailed tutorial about how this bot works see https://github.com/wayfarerx/circumvolve.
     """.stripMargin
 
 }
