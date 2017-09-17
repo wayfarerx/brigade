@@ -73,9 +73,11 @@ object Solver {
   private def selectRole(openings: Map[Role, Int], candidates: Vector[Candidate]): Option[Role] = {
     val filtered = candidates filter (c => openings(c.role) > 0)
     if (filtered.isEmpty) None else {
+      val preference = filtered.map(_.preference).min
+      val withPreference = filtered filter (_.preference == preference)
       val deltas = for {
-        (role, requested) <- openings
-        available = filtered.count(_.role == role) if available > 0
+        (role, requested) <- openings if requested > 0
+        available = withPreference.count(_.role == role) if available > 0
       } yield role -> (requested - available)
       if (deltas.isEmpty) None else Some(deltas.maxBy(_._2)._1)
     }

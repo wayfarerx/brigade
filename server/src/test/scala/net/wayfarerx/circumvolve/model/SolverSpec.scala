@@ -59,7 +59,7 @@ class SolverSpec extends FlatSpec with Matchers {
     )
   }
 
-  "The solver" should "build 12-man groups" in {
+  it should "build 12-man groups" in {
     val (_, Some(team)) = Event()
       .open("evt", Vector(tank -> 2, heal -> 2, dps -> 8))._1
       .assign(Vector(amy -> tank, ann -> heal, ben -> dps, bob -> dps))
@@ -80,7 +80,7 @@ class SolverSpec extends FlatSpec with Matchers {
     )
   }
 
-  "The solver" should "score candidates based on history" in {
+  it should "score candidates based on history" in {
     val oldTeam = Team(Vector(tank -> Vector(amy), heal -> Vector(ann), dps -> Vector(ben, bob)), Vector())
     val (_, Some(team)) = Event(history = History(Vector(oldTeam)))
       .open("evt", Vector(tank -> 1, heal -> 1, dps -> 2))._1
@@ -94,6 +94,14 @@ class SolverSpec extends FlatSpec with Matchers {
       Vector(tank -> Vector(amy), heal -> Vector(sue), dps -> Vector(ben, bob)),
       Vector(ann -> Vector(heal))
     )
+  }
+
+  "The solver" should "favor roles higher on the user preference list" in {
+    val (_, Some(team)) = Event()
+      .open("evt", Vector(tank -> 1, heal -> 1, dps -> 2))._1
+      .volunteer(bob, Vector(heal, dps))
+      .close()
+    team shouldBe Team(Vector(tank -> Vector(), heal -> Vector(bob), dps -> Vector()), Vector())
   }
 
 }
