@@ -11,7 +11,7 @@ echo "su -c '/opt/circumvolve/circumvolve' circumvolve &" >> /etc/rc.local
 
 # Configure the boot script.
 su circumvolve
-cd
+cd /opt/circumvolve
 cat > circumvolve <<- EOM
 #!/bin/bash
 cd

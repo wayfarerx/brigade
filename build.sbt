@@ -4,7 +4,7 @@ lazy val common = Seq(
 
   organization := "net.wayfarerx",
   scalaVersion := "2.12.1",
-  version := "0.3.0-SNAPSHOT",
+  version := "0.3.0",
 
   resolvers += jcenter,
   resolvers += jitpack,
