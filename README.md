@@ -21,6 +21,10 @@ other direct human intervention.
    - [Opening a Roster](#opening-a-roster)
    - [Aborting an Event](#aborting-an-event)
    - [Closing a Roster](#closing-a-roster)
+ - [Volunteering For and Dropping From Events](#volunteering-for-and-dropping-from-events)
+   - [Volunteering For Events](#volunteering-for-events)
+   - [Dropping Out of Events](#dropping-out-of-events)
+   - [Seeing What You Have Volunteered For](#seeing-what-you-have-volunteered-for)
 
 ## Initial Setup
 
@@ -51,7 +55,7 @@ single event and building exactly one team at a time. A channel is
 specified as an event channel by pinning a message from the server owner
 with the following command:
 
-`!event @ADMINISTRATOR*`
+`!event @USER*`
 
 The pinned message must contain the word `!event` followed by mentions
 of zero-or-more users that are designated administrators in this
@@ -162,7 +166,101 @@ Alright everyone let's do this!
 
 Closing a roster forms the final team and saves the makeup for that team
 so that future teams built in this channel can look back at who has
-recently filled what roles when building future teams.
+recently filled what roles.
 
 Once a roster is closed no more assignments or volunteers are honored
 until a new roster has been opened.
+
+## Volunteering For and Dropping From Events
+
+Any user that can send messages to an event channel can volunteer for
+one or more roles and can also change their minds later and drop out
+of those roles. Circumvolve remembers the order that you specify what
+roles you volunteer for and assumes that you volunteered for your most
+desirable role first and any backup roles after that.
+
+For example: if you initially volunteer for `healer` and `dps`, the bot
+assumes you would most enjoy healing but would also be willing to be a
+damage dealer. If you then later volunteer for `tank` it assumes that
+tanking, while something you are willing to do, it is your least
+desirable role.
+
+Dropping roles works much the same way. Assuming you had volunteered as
+above, if you subsequently dropped the `dps` role you would then be
+considered to have volunteered for `healer` first and `tank` as a
+backup.
+
+### Volunteering For Events
+
+To volunteer for an event you simply list one or more roles you wish to
+fill:
+
+`!ROLE+`
+
+
+For example: to volunteer as a healer but also signal that you are
+willing to be a damage dealer if needed you would type:
+
+`!healer !dps`
+
+If you wanted to volunteer as ONLY a tank you would type:
+
+`!tank`
+
+You are also able to mix other text with your role commands and split
+up role commands over multiple messages:
+
+`Bringing my awesome elven !healer witch.`
+
+`Or my mediocre human thief for !dps if you need him.`
+
+### Dropping Out of Events
+
+Sometimes plans change and you have to step away from an event you have
+previously volunteered for. Or perhaps you changed your mind and just
+want to drop one of the multiple roles you volunteered for. This is what
+the drop command is for:
+
+`!drop !ROLE*`
+
+For example, say that you had volunteered to be a healer or damage
+dealer but later decided you were not in a healing mood you could type:
+
+`!drop !healer`
+
+Or maybe your computer caught on fire and you have to fully bow out of
+the event:
+
+`!drop`
+
+Like other commands you can mix text in around your command to explain
+your thinking:
+
+`Sorry all I have to !drop !healer, I rebuilt my witch for PvP.`
+
+Drop commands, when you're dropping only some of the roles you've
+volunteered for, will *edit* the list of roles associated with you. This
+means that the following sequence of commands:
+
+`!tank !healer !dps`
+
+`!drop !healer`
+
+...is equivalent to the single command:
+
+`!tank !dps`
+
+### Seeing What You Have Volunteered For
+
+In the hustle and bustle of building a large team over many days you may
+forget exactly what you are volunteered for. There is a simple command
+that takes an optional user mention that will remind you of where things
+stand:
+
+`!? @USER?`
+
+The bot will respond with the list of roles the specified user is
+volunteered for in order of how they've expressed their preferences.
+
+So `!? @wayfarerx` will show you how wayfarer has volunteered, while
+`!?` will show what YOU have volunteered for.
