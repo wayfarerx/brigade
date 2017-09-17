@@ -25,6 +25,12 @@ other direct human intervention.
    - [Volunteering For Events](#volunteering-for-events)
    - [Dropping Out of Events](#dropping-out-of-events)
    - [Seeing What You Have Volunteered For](#seeing-what-you-have-volunteered-for)
+ - [Other Administrative Commands](#other-administrative-commands)
+   - [Assigning and Releasing Users](#assigning-and-releasing-users)
+   - [Offering and Kicking Users](#offering-and-kicking-users)
+ - [The Help Command](#the-help-command)
+ - [The Team Builder](#the-team-builder)
+ - [Upcoming Features](#upcoming-features)
 
 ## Initial Setup
 
@@ -253,9 +259,9 @@ means that the following sequence of commands:
 ### Seeing What You Have Volunteered For
 
 In the hustle and bustle of building a large team over many days you may
-forget exactly what you are volunteered for. There is a simple command
-that takes an optional user mention that will remind you of where things
-stand:
+forget exactly what you or someone else has volunteered for. There is a
+simple command that takes an optional user mention that will remind you
+of where things stand:
 
 `!? @USER?`
 
@@ -264,3 +270,162 @@ volunteered for in order of how they've expressed their preferences.
 
 So `!? @wayfarerx` will show you how wayfarer has volunteered, while
 `!?` will show what YOU have volunteered for.
+
+## Other Administrative Commands
+
+Sometimes administrators need to step in and exert control over exactly
+how a team gets built. The following commands give administrators
+fine-grained control of the details that go into filling a roster.
+
+### Assigning and Releasing Users
+
+Administrators are allowed to override the team-building logic and
+directly assign users to specific roles with the assign command:
+
+`!assign (@USER !ROLE)+`
+
+The assign command takes one or more pairs of user mentions and role
+names and makes sure those role assignments are honored before roles
+are filled with volunteers. So to assign your main tank and healer you
+could say:
+
+`!assign @Bob !tank @Sue !healer`
+
+Much like when volunteering for a command, assignments are applied in
+the order they are received. So if you want to specify the main and off
+tanks you could type:
+
+`!assign @Bob !tank @Sue !tank`
+
+...which would make `@Bob` the main tank and `@Sue` the off tank.
+
+With great power comes great responsibility and sometimes administrators
+that assign users to roles must take those assignments back when the
+situation changes. That's what the release command is for:
+
+`!release @USER+`
+
+The release command allows administrators to release one or more users
+from previously assigned roles. So if you took the example above where
+we assigned a tank and healer:
+
+`!assign @Bob !tank @Sue !healer`
+
+...but later found out `@Bob` couldn't make it, we could release the
+tank role back to any volunteers.
+
+`!release @Bob`
+
+Like other commands, assign and release can be mixed in with other text:
+
+`I'm going to !assign @Bob !tank because we need his big health pool.`
+
+`I have to !release @Sue because her dog is having puppies.`
+
+### Offering and Kicking Users
+
+Administrators may also emulate volunteer and drop commands from other
+users.
+
+The offer command directly emulates other users volunteering for one or
+more roles:
+
+`!offer @USER !ROLE+`
+
+So an administrator typing:
+
+`!offer @Bob !tank !dps`
+
+...would have the exact same effect as `@Bob` himself typing:
+
+`!tank !dps`
+
+This is mostly useful if a user is unable to connect to Discord but has
+requested that an admin step in on their behalf.
+
+Conversely, administrators can remove users from some or all roles with
+the kick command:
+
+`!kick @USER !ROLE*`
+
+Similar to offer, kick emulates other users dropping one or more roles.
+So an administrator typing:
+
+`!kick @Bob !tank`
+
+...would have the exact same effect as `@Bob` himself typing:
+
+`!drop !tank`
+
+The kick command is useful for when someone fails to show up for an
+event and the administrator wants the team builder to exclude them. Say
+`@Sue` fails to show up, the administrator can type:
+
+`!kick @Sue`
+
+...and the team builder will progress as if `@Sue` had never
+volunteered.
+
+As you have come to expect, offer and kick commands can be included with
+other text:
+
+`So he's at work but I'm supposed to !offer @Bob !tank while he's gone.`
+
+`Since she's not online I'm going to !kick @Sue from the team.`
+
+## The Help Command
+
+The help command is a simple command that displays a short version of
+this documentation in the Discord channel:
+
+`!help`
+
+The help command also prints a link that points back to this
+documentation.
+
+## The Team Builder
+
+The team builder is a multi-step, heuristic algorithm that attempts to
+build teams in a fair and equitable manner over multiple incarnations
+of an event.
+
+There are three major considerations that are taken into account when
+building a team:
+
+ - The preferences for roles expressed by volunteers.
+ - The history of what users have filled what roles recently.
+ - The order that users volunteered for specific roles.
+
+The team builder works step-by-step through the above considerations,
+adding one user to the team at a time using an approximation of the
+following logic:
+
+ - First, the builder processes all assignments, filling roles with
+   users in the order they were assigned until no assignments are left.
+ - Next, the builder selects a role with open slots to fill. It favors
+   roles for which users have expressed a preference for, falling back
+   to roles that still need the most members.
+ - After selecting a role, a user is selected to fill this role by:
+   - Finding users with the highest preference for the role.
+   - Sorting those users with a scoring algorithm based on how recently
+     they have filled that role, favoring users who have not filled that
+     role as recently.
+   - Breaking any ties by picking users that signed up first.
+ - Finally, the builder will loop back, select another role with
+   unfilled slots and proceeding as above until the team is full or no
+   volunteers remain.
+
+Currently, the historical scoring logic is fairly basic. Future versions
+of this bot might allow for more customization in this regard.
+
+## Upcoming Features
+
+As cool as circumvolve is, it could always do more:
+
+ - [Allowing guild owners or administrators to influence the historical
+   scoring algorithm on a per-channel basis.](https://github.com/wayfarerx/circumvolve/issues/3)
+ - [Supporting the construction of multiple teams in the case that there
+   are enough volunteers to do so.](https://github.com/wayfarerx/circumvolve/issues/4)
+ - Anything else you can think of! Just open an issue
+   [here on GitHub](https://github.com/wayfarerx/circumvolve/issues/new)
+   or hit me up on Discord: @wayfarerx.
