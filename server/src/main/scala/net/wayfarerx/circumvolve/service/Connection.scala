@@ -203,9 +203,10 @@ class Connection(token: String, storage: Storage) extends Actor {
     client foreach { discord =>
       val messageId = status.messageId.toLong
       val message = discord.getMessageByID(messageId)
+      val author = Member(message.getAuthor.getStringID)
       status match {
         case Status.Response(_, _, _, member, roles) =>
-          message.reply(Messages.queryResponse(message.getGuild, member, roles))
+          message.reply(Messages.queryResponse(message.getGuild, author, member, roles))
         case rosterStatus: Status.TeamStatus =>
           (rosterStatus match {
             case Status.Opened(_, _, _, roster, team) => Some(roster -> team)

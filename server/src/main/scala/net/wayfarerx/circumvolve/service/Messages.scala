@@ -54,15 +54,17 @@ object Messages {
    * The message displayed in response to a user's role query.
    *
    * @param guild  The Discord guild to look up users with.
+   * @param author The member issued the query.
    * @param member The member that was queried.
    * @param roles  The roles that were found for the member.
    * @return The message displayed when the attempt to build a tem is aborted.
    */
-  def queryResponse(guild: IGuild, member: Member, roles: Vector[Role]): String = {
-    val userName = guild.getClient.getUserByID(member.id.toLong).getDisplayName(guild)
-    if (roles.isEmpty) s"The user $userName is not volunteered for any roles."
-    else if (roles.size == 1) s"The user $userName is volunteered for ${roles.head.name}."
-    else s"The user $userName has volunteered for ${roles.init.map(_.name).mkString(", ")} & ${roles.last.name}."
+  def queryResponse(guild: IGuild, author: Member, member: Member, roles: Vector[Role]): String = {
+    val memberInfo = if (author == member) "you are" else
+      s"the user ${guild.getClient.getUserByID(member.id.toLong).getDisplayName(guild)} is"
+    if (roles.isEmpty) s"$memberInfo not volunteered for any roles."
+    else if (roles.size == 1) s"$memberInfo volunteered for ${roles.head.name}."
+    else s"$memberInfo volunteered for ${roles.init.map(_.name).mkString(", ")} & ${roles.last.name}."
   }
 
   /**
