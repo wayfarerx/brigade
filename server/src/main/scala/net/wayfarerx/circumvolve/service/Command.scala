@@ -18,7 +18,7 @@
 
 package net.wayfarerx.circumvolve.service
 
-import net.wayfarerx.circumvolve.model.{Member, Role}
+import net.wayfarerx.circumvolve.model.{User, Role}
 
 /**
  * Base type for commands sent from the connection to a guild.
@@ -64,7 +64,7 @@ object Command {
    * @param channelId   The ID of the channel this command pertains to.
    * @param assignments The collection of members and their assigned roles.
    */
-  case class Assign(channelId: String, assignments: Vector[(Member, Role)]) extends Command
+  case class Assign(channelId: String, assignments: Vector[(User, Role)]) extends Command
 
   /**
    * Releases the specified members from their assigned roles.
@@ -72,7 +72,7 @@ object Command {
    * @param channelId The ID of the channel this command pertains to.
    * @param members   The mapping of roles to lists of members.
    */
-  case class Release(channelId: String, members: Set[Member]) extends Command
+  case class Release(channelId: String, members: Set[User]) extends Command
 
   /**
    * Volunteers the specified member for the supplied roles.
@@ -81,7 +81,7 @@ object Command {
    * @param member    The member that is volunteering.
    * @param roles     The roles that are being volunteered for.
    */
-  case class Volunteer(channelId: String, member: Member, roles: Vector[Role]) extends Command
+  case class Volunteer(channelId: String, member: User, roles: Vector[Role]) extends Command
 
   /**
    * Drops a member from certain roles in the in-progress roster.
@@ -90,7 +90,7 @@ object Command {
    * @param member       The member that is dropping.
    * @param limitToRoles The only roles to drop or empty to drop all roles.
    */
-  case class Drop(channelId: String, member: Member, limitToRoles: Vector[Role]) extends Command
+  case class Drop(channelId: String, member: User, limitToRoles: Vector[Role]) extends Command
 
   /**
    * Queries the roles a member has volunteered for in the in-progress roster.
@@ -99,6 +99,6 @@ object Command {
    * @param messageId The ID of the message that contained the query.
    * @param member    The member to query the volunteered roles for.
    */
-  case class Query(channelId: String, messageId: String, member: Member) extends Command
+  case class Query(channelId: String, messageId: String, member: User) extends Command
 
 }

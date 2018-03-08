@@ -18,7 +18,7 @@
 
 package net.wayfarerx.circumvolve.service
 
-import net.wayfarerx.circumvolve.model.{Member, Role, Roster, Team}
+import net.wayfarerx.circumvolve.model.{User, Role, Roster, Team}
 
 /**
  * Base class for messages sent to the UI.
@@ -51,7 +51,7 @@ object Status {
    * @param roles     The roles that the queried member has volunteered for.
    */
   case class Response(guildId: String, channelId: String, messageId: String,
-    member: Member, roles: Vector[Role]) extends Status
+    member: User, roles: Vector[Role]) extends Status
 
   /**
    * Base class for messages sent to the UI that describe the currently available team.

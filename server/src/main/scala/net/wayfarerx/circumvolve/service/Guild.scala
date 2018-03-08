@@ -21,7 +21,7 @@ package net.wayfarerx.circumvolve.service
 import akka.actor.{Actor, Props}
 import akka.event.Logging
 
-import net.wayfarerx.circumvolve.model.{Event, History, Member, Role}
+import net.wayfarerx.circumvolve.model.{Event, History, User, Role}
 
 /**
  * An actor that manages the state of one guild's events.
@@ -105,7 +105,7 @@ final class Guild(guildId: String, storage: Storage) extends Actor {
    * @param channelId   The channel of the event to assign to.
    * @param assignments The assignments to make.
    */
-  private def onAssign(channelId: String, assignments: Vector[(Member, Role)]): Unit = {
+  private def onAssign(channelId: String, assignments: Vector[(User, Role)]): Unit = {
     log.debug(s"Assigning ${assignments.size} member(s) to event for $guildId/$channelId.")
     val event = loadEvent(channelId).assign(assignments)
     event.roster foreach (storage.putRoster(guildId, channelId, _))
@@ -122,7 +122,7 @@ final class Guild(guildId: String, storage: Storage) extends Actor {
    * @param channelId The channel of the event to release from.
    * @param members   The members to release.
    */
-  private def onRelease(channelId: String, members: Set[Member]): Unit = {
+  private def onRelease(channelId: String, members: Set[User]): Unit = {
     log.debug(s"Releasing ${members.size} member(s) from event for $guildId/$channelId.")
     val event = loadEvent(channelId).release(members)
     event.roster foreach (storage.putRoster(guildId, channelId, _))
@@ -140,7 +140,7 @@ final class Guild(guildId: String, storage: Storage) extends Actor {
    * @param member    The member volunteering.
    * @param roles     The roles being volunteered for.
    */
-  private def onVolunteer(channelId: String, member: Member, roles: Vector[Role]): Unit = {
+  private def onVolunteer(channelId: String, member: User, roles: Vector[Role]): Unit = {
     log.debug(s"Volunteering $member to event for $guildId/$channelId.")
     val event = loadEvent(channelId).volunteer(member, roles)
     event.roster foreach (storage.putRoster(guildId, channelId, _))
@@ -158,7 +158,7 @@ final class Guild(guildId: String, storage: Storage) extends Actor {
    * @param member       The member dropping.
    * @param limitToRoles The only roles to drop or empty to drop all roles.
    */
-  private def onDrop(channelId: String, member: Member, limitToRoles: Vector[Role]): Unit = {
+  private def onDrop(channelId: String, member: User, limitToRoles: Vector[Role]): Unit = {
     log.debug(s"Dropping $member from event for $guildId/$channelId.")
     val event = loadEvent(channelId).drop(member, limitToRoles)
     event.roster foreach (storage.putRoster(guildId, channelId, _))
@@ -176,7 +176,7 @@ final class Guild(guildId: String, storage: Storage) extends Actor {
    * @param messageId The ID of the message that contained the query.
    * @param member    The member being queried.
    */
-  private def onQuery(channelId: String, messageId: String, member: Member): Unit = {
+  private def onQuery(channelId: String, messageId: String, member: User): Unit = {
     log.debug(s"Dropping $member from event for $guildId/$channelId.")
     val roles = loadEvent(channelId).roster map (_.volunteers.filter(_._1 == member).map(_._2).distinct)
     sender ! Status.Response(guildId, channelId, messageId, member, roles getOrElse Vector())

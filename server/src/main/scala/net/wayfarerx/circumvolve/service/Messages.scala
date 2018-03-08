@@ -18,7 +18,7 @@
 
 package net.wayfarerx.circumvolve.service
 
-import net.wayfarerx.circumvolve.model.{Member, Role, Roster, Team}
+import net.wayfarerx.circumvolve.model.{User, Role, Roster, Team}
 import sx.blah.discord.handle.obj.IGuild
 
 /**
@@ -59,7 +59,7 @@ object Messages {
    * @param roles  The roles that were found for the member.
    * @return The message displayed when the attempt to build a tem is aborted.
    */
-  def queryResponse(guild: IGuild, author: Member, member: Member, roles: Vector[Role]): String = {
+  def queryResponse(guild: IGuild, author: User, member: User, roles: Vector[Role]): String = {
     val memberInfo = if (author == member) "you are" else
       s"the user ${guild.getClient.getUserByID(member.id.toLong).getDisplayName(guild)} is"
     if (roles.isEmpty) s"$memberInfo not volunteered for any roles."

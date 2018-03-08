@@ -24,7 +24,7 @@ package net.wayfarerx.circumvolve.model
  * @param members The members that have been assigned to a team by role.
  * @param backups The backup members and the roles they support.
  */
-case class Team(members: Vector[(Role, Vector[Member])], backups: Vector[(Member, Vector[Role])]) {
+case class Team(members: Vector[(Role, Vector[User])], backups: Vector[(User, Vector[Role])]) {
 
   /**
    * Adds a member to this team under the specified role.
@@ -33,7 +33,7 @@ case class Team(members: Vector[(Role, Vector[Member])], backups: Vector[(Member
    * @param member The member to add to this team.
    * @return This team with the supplied member added under the specified role.
    */
-  def add(role: Role, member: Member): Team =
+  def add(role: Role, member: User): Team =
     copy(members = members.indexWhere(_._1 == role) match {
       case index if index >= 0 =>
         val membersInRole = members(index)._2

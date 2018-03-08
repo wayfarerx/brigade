@@ -29,8 +29,8 @@ package net.wayfarerx.circumvolve.model
 case class Roster(
   eventId: String,
   slots: Vector[(Role, Int)] = Vector(),
-  assignments: Vector[(Member, Role)] = Vector(),
-  volunteers: Vector[(Member, Role)] = Vector()) {
+  assignments: Vector[(User, Role)] = Vector(),
+  volunteers: Vector[(User, Role)] = Vector()) {
 
   /**
    * Normalizes this roster by removing empty slots, superfluous assignments and invalid volunteer roles.

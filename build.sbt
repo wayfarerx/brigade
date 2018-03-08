@@ -18,6 +18,7 @@ lazy val server = (project in file("server")).
 
     name := "circumvolve-server",
 
+    libraryDependencies += cats,
     libraryDependencies += akka,
     libraryDependencies += discord4j,
     libraryDependencies += json4sNative,

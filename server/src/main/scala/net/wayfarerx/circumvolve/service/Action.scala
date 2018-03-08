@@ -18,7 +18,7 @@
 
 package net.wayfarerx.circumvolve.service
 
-import net.wayfarerx.circumvolve.model.{Member, Role}
+import net.wayfarerx.circumvolve.model.{User, Role}
 
 /**
  * Base type for actions parsed from a message.
@@ -52,14 +52,14 @@ object Action {
    *
    * @param assignments The collection of members and their assigned roles.
    */
-  case class Assign(assignments: Vector[(Member, Role)]) extends Action
+  case class Assign(assignments: Vector[(User, Role)]) extends Action
 
   /**
    * Releases the specified members from their assigned roles.
    *
    * @param members The mapping of roles to lists of members.
    */
-  case class Release(members: Set[Member]) extends Action
+  case class Release(members: Set[User]) extends Action
 
   /**
    * Offers the specified member for the supplied roles.
@@ -67,7 +67,7 @@ object Action {
    * @param member The name of the member that is volunteering.
    * @param roles  The roles that are being volunteered for.
    */
-  case class Offer(member: Member, roles: Vector[Role]) extends Action
+  case class Offer(member: User, roles: Vector[Role]) extends Action
 
   /**
    * Kicks a member from certain roles in the in-progress roster.
@@ -75,7 +75,7 @@ object Action {
    * @param member       The name of the member that is dropping.
    * @param limitToRoles The only roles to drop or empty to drop all roles.
    */
-  case class Kick(member: Member, limitToRoles: Vector[Role]) extends Action
+  case class Kick(member: User, limitToRoles: Vector[Role]) extends Action
 
   /**
    * Volunteers the specified member for the supplied roles.
@@ -96,7 +96,7 @@ object Action {
    *
    * @param member The member to query or none to query the author.
    */
-  case class Query(member: Option[Member]) extends Action
+  case class Query(member: Option[User]) extends Action
 
   /**
    * An action that prints the help message.

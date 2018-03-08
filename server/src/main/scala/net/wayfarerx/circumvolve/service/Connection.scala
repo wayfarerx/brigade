@@ -23,7 +23,7 @@ import language.implicitConversions
 
 import akka.actor.{Actor, ActorRef, Props}
 
-import net.wayfarerx.circumvolve.model.Member
+import net.wayfarerx.circumvolve.model.User
 
 import sx.blah.discord.api.events.IListener
 import sx.blah.discord.api.{ClientBuilder, IDiscordClient}
@@ -128,7 +128,7 @@ class Connection(token: String, storage: Storage) extends Actor {
     } {
       val channelId = event.getChannel.getStringID
       val administrator = administrators(event.getAuthor.getLongID)
-      val author = Member(event.getAuthor.getStringID)
+      val author = User(event.getAuthor.getStringID)
       Parser(event.getMessage.getContent) foreach {
         case Action.Open(slots) if administrator =>
           guild ! Command.Open(channelId, pendingMessage(event.getMessage.reply(Messages.building)).getStringID, slots)
@@ -203,7 +203,7 @@ class Connection(token: String, storage: Storage) extends Actor {
     client foreach { discord =>
       val messageId = status.messageId.toLong
       val message = discord.getMessageByID(messageId)
-      val author = Member(message.getAuthor.getStringID)
+      val author = User(message.getAuthor.getStringID)
       status match {
         case Status.Response(_, _, _, member, roles) =>
           message.reply(Messages.queryResponse(message.getGuild, author, member, roles))

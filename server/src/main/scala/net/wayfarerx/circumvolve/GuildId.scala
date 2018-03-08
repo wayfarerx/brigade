@@ -1,7 +1,7 @@
 /*
- * Member.scala
+ * GuildId.scala
  *
- * Copyright 2017 wayfarerx <x@wayfarerx.net> (@thewayfarerx)
+ * Copyright 2018 wayfarerx <x@wayfarerx.net> (@thewayfarerx)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-package net.wayfarerx.circumvolve.model
+package net.wayfarerx.circumvolve
 
 /**
- * A member that can be part of a team.
+ * Type safe representation of guild IDs.
  *
- * @param id The ID of the member in question.
+ * @param value The value of this guild ID.
  */
-case class Member(id: String)
+case class GuildId(value: Long)

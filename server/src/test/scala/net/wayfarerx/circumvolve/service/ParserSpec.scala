@@ -20,7 +20,7 @@ package net.wayfarerx.circumvolve.service
 
 import org.scalatest._
 
-import net.wayfarerx.circumvolve.model.{Member, Role}
+import net.wayfarerx.circumvolve.model.{User, Role}
 
 /**
  * Test case for the message parser.
@@ -31,10 +31,10 @@ class ParserSpec extends FlatSpec with Matchers {
   val heal = Role("heal")
   val dps = Role("dps")
 
-  val amy = Member("1")
-  val ann = Member("2")
-  val ben = Member("3")
-  val bob = Member("4")
+  val amy = User("1")
+  val ann = User("2")
+  val ben = User("3")
+  val bob = User("4")
 
   "The parser" should "handle lifecycle actions" in {
     Parser(s"!open !tank 1 !heal 2 !dps 9") shouldBe
@@ -89,7 +89,7 @@ class ParserSpec extends FlatSpec with Matchers {
     Parser(s"!kick") shouldBe Vector()
   }
 
-  def mention(member: Member): String =
+  def mention(member: User): String =
     s"<@${member.id}>"
 
 }

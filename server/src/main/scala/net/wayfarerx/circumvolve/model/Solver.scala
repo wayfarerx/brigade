@@ -32,7 +32,7 @@ object Solver {
    */
   def apply(roster: Roster, history: History): Team = {
     val normal = roster.normalized
-    val team = (Team(normal.slots.map(_._1 -> Vector[Member]()), Vector()) /: normal.assignments) { (t, a) =>
+    val team = (Team(normal.slots.map(_._1 -> Vector[User]()), Vector()) /: normal.assignments) { (t, a) =>
       t.add(a._2, a._1)
     }
     solve(team,
@@ -90,7 +90,7 @@ object Solver {
    * @param candidates The candidates to choose from.
    * @return A member to fill the specified role.
    */
-  private def fillRole(role: Role, candidates: Vector[Candidate]): Member =
+  private def fillRole(role: Role, candidates: Vector[Candidate]): User =
     chooseMember(candidates filter (_.role == role))
 
   /**
@@ -101,7 +101,7 @@ object Solver {
    * @return The most desirable member.
    */
   @annotation.tailrec
-  private def chooseMember(from: Vector[Candidate], depth: Int = 0): Member = {
+  private def chooseMember(from: Vector[Candidate], depth: Int = 0): User = {
     val (current, next) = from partition (_.preference <= depth)
     if (current.nonEmpty) current.head.member else chooseMember(next, depth + 1)
   }
@@ -114,7 +114,7 @@ object Solver {
    * @param score      The score derived from previous teams where the member filled the specified role.
    * @param preference The preference that the member showed for the specified role.
    */
-  private case class Candidate(member: Member, role: Role, score: Int, preference: Int)
+  private case class Candidate(member: User, role: Role, score: Int, preference: Int)
 
   /**
    * Factory for collections of candidates.
@@ -128,7 +128,7 @@ object Solver {
      * @param history    The history of member participation in the event.
      * @return A collection of candidates for the event.
      */
-    def from(volunteers: Vector[(Member, Role)], history: History): Vector[Candidate] = {
+    def from(volunteers: Vector[(User, Role)], history: History): Vector[Candidate] = {
       val preferences = volunteers.groupBy(_._1).mapValues(_.map(_._2).zipWithIndex.toMap)
       val candidates = for {
         (member, role) <- volunteers

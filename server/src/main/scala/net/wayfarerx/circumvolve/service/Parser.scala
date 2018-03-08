@@ -18,7 +18,7 @@
 
 package net.wayfarerx.circumvolve.service
 
-import net.wayfarerx.circumvolve.model.{Member, Role}
+import net.wayfarerx.circumvolve.model.{User, Role}
 
 /**
  * A wrapper around a string tokenizer that supports backtracking.
@@ -149,9 +149,9 @@ object Parser {
    * @param parser The parser to read from.
    * @return The member if one was found.
    */
-  private def readMember(parser: Parser): Option[Member] =
+  private def readMember(parser: Parser): Option[User] =
     parser.advance {
-      case Token.Mention(id) => Some(Member(id.toString))
+      case Token.Mention(id) => Some(User(id.toString))
       case _ => None
     }
 
@@ -163,7 +163,7 @@ object Parser {
    * @return The collection of members that were found.
    */
   @annotation.tailrec
-  private def readMembers(parser: Parser, members: Vector[Member] = Vector()): Vector[Member] =
+  private def readMembers(parser: Parser, members: Vector[User] = Vector()): Vector[User] =
   readMember(parser) match {
     case Some(member) => readMembers(parser, members :+ member)
     case None => members
@@ -177,7 +177,7 @@ object Parser {
    * @return The collection of assignments that were found.
    */
   @annotation.tailrec
-  private def readAssignments(parser: Parser, assignments: Vector[(Member, Role)] = Vector()): Vector[(Member, Role)] =
+  private def readAssignments(parser: Parser, assignments: Vector[(User, Role)] = Vector()): Vector[(User, Role)] =
   readMember(parser) match {
     case Some(member) => readRole(parser) match {
       case Some(role) => readAssignments(parser, assignments :+ (member -> role))

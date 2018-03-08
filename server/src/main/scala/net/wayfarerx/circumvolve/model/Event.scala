@@ -48,7 +48,7 @@ case class Event(roster: Option[Roster] = None, history: History = History()) {
    * @param assignments The collection of members and their assigned roles.
    * @return A copy of this roster with the specified assignments.
    */
-  def assign(assignments: Vector[(Member, Role)]): Event =
+  def assign(assignments: Vector[(User, Role)]): Event =
     copy(roster = roster map (r => r.copy(assignments = r.assignments ++ assignments)))
 
   /**
@@ -57,7 +57,7 @@ case class Event(roster: Option[Roster] = None, history: History = History()) {
    * @param members The members to release from their assigned roles.
    * @return A copy of this roster with the specified members released from their assigned roles.
    */
-  def release(members: Set[Member]): Event =
+  def release(members: Set[User]): Event =
     copy(roster = roster map (r => r.copy(assignments = r.assignments.filterNot(a => members(a._1)))))
 
   /**
@@ -67,7 +67,7 @@ case class Event(roster: Option[Roster] = None, history: History = History()) {
    * @param roles  The roles that are being volunteered for.
    * @return A copy of this roster with the specified members volunteered for the supplied roles.
    */
-  def volunteer(member: Member, roles: Vector[Role]): Event =
+  def volunteer(member: User, roles: Vector[Role]): Event =
     copy(roster = roster map (r => r.copy(volunteers = r.volunteers ++ roles.map(member -> _))))
 
   /**
@@ -77,7 +77,7 @@ case class Event(roster: Option[Roster] = None, history: History = History()) {
    * @param limitToRoles The only roles to drop or empty to drop all roles.
    * @return A copy of this roster with the specified members dropping the supplied roles.
    */
-  def drop(member: Member, limitToRoles: Vector[Role]): Event =
+  def drop(member: User, limitToRoles: Vector[Role]): Event =
     copy(roster = roster map { r =>
       r.copy(volunteers = r.volunteers filterNot { v =>
         v._1 == member && (limitToRoles.isEmpty || limitToRoles.contains(v._2))
