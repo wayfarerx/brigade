@@ -25,12 +25,12 @@ import org.json4s.native.Serialization.{read, write}
 /**
  * Shared definitions for the model package.
  */
-package object model {
+package object model_old {
 
   /**
    * The global JSON formats.
    */
-  implicit private[model] val JsonFormats: Formats = Serialization.formats(NoTypeHints) + new RoleSerializer
+  implicit private[model_old] val JsonFormats: Formats = Serialization.formats(NoTypeHints) + new RoleSerializer
 
   /**
    * Reads an object from a string.
@@ -39,7 +39,7 @@ package object model {
    * @tparam T The type of object to read.
    * @return The object that was read from the string.
    */
-  private[model] def readJson[T: Manifest](json: String): T =
+  private[model_old] def readJson[T: Manifest](json: String): T =
     read(json)
 
   /**
@@ -49,13 +49,13 @@ package object model {
    * @tparam T The type of object to write.
    * @return The string that was written.
    */
-  private[model] def writeJson[T <: AnyRef](value: T): String =
+  private[model_old] def writeJson[T <: AnyRef](value: T): String =
     write(value)
 
   /**
    * Custom serializer for the non-case-class role object.
    */
-  private[model] class RoleSerializer extends CustomSerializer[Role](_ => ( {
+  private[model_old] class RoleSerializer extends CustomSerializer[Role](_ => ( {
     case JObject(JField("name", JString(name)) :: Nil) => Role(name)
   }, {
     case role: Role => JObject(JField("name", JString(role.name)) :: Nil)

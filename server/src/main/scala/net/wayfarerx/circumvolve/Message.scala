@@ -1,5 +1,5 @@
 /*
- * GuildId.scala
+ * Message.scala
  *
  * Copyright 2018 wayfarerx <x@wayfarerx.net> (@thewayfarerx)
  *
@@ -19,8 +19,34 @@
 package net.wayfarerx.circumvolve
 
 /**
- * Type safe representation of guild IDs.
+ * Describes a message handled by the system.
  *
- * @param value The value of this guild ID.
+ * @param tokens The tokens contained in the message.
  */
-case class GuildId(value: Long)
+case class Message(tokens: Vector[Message.Token])
+
+/**
+ * Definitions of the message tokens.
+ */
+object Message {
+
+  /**
+   * Base type for message tokens.
+   */
+  sealed trait Token
+
+  /**
+   * A token that mentions a user.
+   *
+   * @param user The user to mention.
+   */
+  case class Mention(user: User) extends Token
+
+  /**
+   * A token that represents a word.
+   *
+   * @param value The value of this word.
+   */
+  case class Word(value: String) extends Token
+
+}

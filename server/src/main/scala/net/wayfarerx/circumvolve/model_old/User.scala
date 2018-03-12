@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package net.wayfarerx.circumvolve.model
+package net.wayfarerx.circumvolve.model_old
 
 /**
  * A user that can be part of a team.

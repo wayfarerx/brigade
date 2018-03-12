@@ -23,7 +23,7 @@ import language.implicitConversions
 
 import akka.actor.{Actor, ActorRef, Props}
 
-import net.wayfarerx.circumvolve.model.User
+import net.wayfarerx.circumvolve.model_old.User
 
 import sx.blah.discord.api.events.IListener
 import sx.blah.discord.api.{ClientBuilder, IDiscordClient}

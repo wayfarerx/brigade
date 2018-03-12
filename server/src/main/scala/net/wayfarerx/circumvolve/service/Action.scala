@@ -18,7 +18,7 @@
 
 package net.wayfarerx.circumvolve.service
 
-import net.wayfarerx.circumvolve.model.{User, Role}
+import net.wayfarerx.circumvolve.model_old.{User, Role}
 
 /**
  * Base type for actions parsed from a message.

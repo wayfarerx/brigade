@@ -18,7 +18,7 @@
 
 package net.wayfarerx.circumvolve.service
 
-import net.wayfarerx.circumvolve.model.{User, Role, Roster, Team}
+import net.wayfarerx.circumvolve.model_old.{User, Role, Roster, Team}
 import sx.blah.discord.handle.obj.IGuild
 
 /**

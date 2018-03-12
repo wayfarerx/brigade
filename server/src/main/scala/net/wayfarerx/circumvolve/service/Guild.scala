@@ -21,7 +21,7 @@ package net.wayfarerx.circumvolve.service
 import akka.actor.{Actor, Props}
 import akka.event.Logging
 
-import net.wayfarerx.circumvolve.model.{Event, History, User, Role}
+import net.wayfarerx.circumvolve.model_old.{Event, History, User, Role}
 
 /**
  * An actor that manages the state of one guild's events.

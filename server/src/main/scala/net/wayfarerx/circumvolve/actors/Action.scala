@@ -1,5 +1,5 @@
 package net.wayfarerx.circumvolve
-package guilds
+package actors
 
 sealed trait Action {
 

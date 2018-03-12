@@ -19,12 +19,21 @@
 package net.wayfarerx.circumvolve
 package discord
 
-import concurrent.{Await, ExecutionContext, Future}
+import concurrent.Await
+import concurrent.ExecutionContext.Implicits.global
 import concurrent.duration._
-import java.io.Closeable
+
+import java.util.concurrent.CountDownLatch
+
+import akka.NotUsed
+import akka.actor.typed.ActorSystem
+import akka.actor.typed.Behavior
+import akka.actor.typed.scaladsl._
 
 import cats.effect.IO
+
 import sx.blah.discord.api.{ClientBuilder, IDiscordClient}
+import sx.blah.discord.api.events.IListener
 
 /**
  * A connection to the Discord service.
@@ -32,15 +41,43 @@ import sx.blah.discord.api.{ClientBuilder, IDiscordClient}
  * @param system The actor system managed by this connection.
  * @param client The Discord client managed by this connection.
  */
-final class Connection private(system: Closeable, client: IDiscordClient)(implicit ec: ExecutionContext) {
+final class Connection private(client: IDiscordClient, system: ActorSystem[NotUsed], listeners: Vector[IListener[_]]) {
+
+  /** The latch that signals termination is complete. */
+  private val latch = new CountDownLatch(1)
+
+  /**
+   * Waits the specified amount of time for the connection to be closed.
+   *
+   * @param maxWaitTime The maximum amount of time to wait.
+   * @return True if the connection was closed or false if the maximum wait time elapsed first.
+   */
+  def waitForDisconnect(maxWaitTime: Duration = Duration.Inf): IO[Boolean] = IO {
+    maxWaitTime match {
+      case duration: FiniteDuration =>
+        latch.await(duration.length, duration.unit)
+      case _ =>
+        latch.await()
+        true
+    }
+  }
 
   /**
    * Attempts to close this connection.
    *
    * @return The attempt to close this connection.
    */
-  def dispose(): IO[Unit] =
-    IO(try Await.result(Future(system.close()), 10.seconds) finally client.logout())
+  def disconnect(): IO[Unit] = IO {
+
+    def unregister(listeners: Vector[IListener[_]]): Unit = if (listeners.nonEmpty)
+      try client.getDispatcher.unregisterListener(listeners.head) finally unregister(listeners.tail)
+
+    try {
+      try unregister(listeners) finally {
+        try Await.result(system.terminate(), 10.seconds) finally client.logout()
+      }
+    } finally latch.countDown()
+  }
 
 }
 
@@ -52,16 +89,26 @@ object Connection {
   /**
    * Attempts to create a new Discord connection.
    *
-   * @param token   The token to use when logging in.
-   * @param handler The Discord event handler.
-   * @param impl    The Discord implementation to use.
+   * @param token The token to use when logging in.
+   * @param impl  The Discord implementation to use.
    * @return The attempt to create a new Discord connection.
    */
-  def apply(token: String)(handler: Event => IO[Unit])(implicit impl: Discord): IO[Connection] = {
+  def apply(token: String)(implicit impl: Discord): IO[Connection] = {
+
+    /* The behavior of this actor. */
+    val main: Behavior[NotUsed] = Behaviors.setup { context =>
+      val incoming = context.spawn((new Incoming).behavior, "incoming")
+      val outgoing = context.spawn((new Outgoing).behavior, "outgoing")
+      context.watch(incoming)
+      Behaviors.same
+    }
     for {
       client <- impl.connect(token)
+      system <- IO(ActorSystem(main, "circumvolve"))
 
-    } yield new Connection(???, client)
+    } yield {
+      new Connection(client, system, ???)
+    }
   }
 
   /**

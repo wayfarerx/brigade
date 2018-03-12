@@ -22,7 +22,7 @@ import com.amazonaws.regions.Regions
 
 import collection.JavaConverters._
 import com.amazonaws.services.s3.model.ListObjectsRequest
-import net.wayfarerx.circumvolve.model.{Roster, Team}
+import net.wayfarerx.circumvolve.model_old.{Roster, Team}
 
 /**
  * Base class for event storage strategies.

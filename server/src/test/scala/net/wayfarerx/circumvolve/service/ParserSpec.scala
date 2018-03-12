@@ -20,7 +20,7 @@ package net.wayfarerx.circumvolve.service
 
 import org.scalatest._
 
-import net.wayfarerx.circumvolve.model.{User, Role}
+import net.wayfarerx.circumvolve.model_old.{User, Role}
 
 /**
  * Test case for the message parser.

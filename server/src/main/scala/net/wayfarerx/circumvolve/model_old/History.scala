@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package net.wayfarerx.circumvolve.model
+package net.wayfarerx.circumvolve.model_old
 
 /**
  * The history of teams that were created for an event.

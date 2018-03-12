@@ -1,5 +1,5 @@
 /*
- * Router.scala
+ * Outgoing.scala
  *
  * Copyright 2018 wayfarerx <x@wayfarerx.net> (@thewayfarerx)
  *
@@ -24,7 +24,9 @@ import akka.actor.typed.scaladsl._
 /**
  * The actor responsible for handling events by sending actions to the appropriate guild.
  */
-final class Router {
+final class Outgoing {
+
+  import Outgoing._
 
   /** The behavior of this actor. */
   val behavior: Behaviors.Immutable[Event] = {
@@ -35,7 +37,17 @@ final class Router {
     }
   }
 
-  /** The guilds this router is currently managing. */
-  private var routes: Map[GuildId, guilds.Guild] = Map()
+}
+
+object Outgoing {
+
+  sealed trait Event {
+
+  }
+
+
+  case object Hi extends Event
+
+  case object Ho extends Event
 
 }

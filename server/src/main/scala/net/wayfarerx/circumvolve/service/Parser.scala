@@ -18,7 +18,7 @@
 
 package net.wayfarerx.circumvolve.service
 
-import net.wayfarerx.circumvolve.model.{User, Role}
+import net.wayfarerx.circumvolve.model_old.{User, Role}
 
 /**
  * A wrapper around a string tokenizer that supports backtracking.

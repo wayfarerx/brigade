@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package net.wayfarerx.circumvolve.model
+package net.wayfarerx.circumvolve.model_old
 
 /**
  * A team of members in roles derived from a roster as well as any backup members and roles.

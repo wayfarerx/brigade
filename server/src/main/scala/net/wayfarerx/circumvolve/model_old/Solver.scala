@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package net.wayfarerx.circumvolve.model
+package net.wayfarerx.circumvolve.model_old
 
 /**
  * Implementation of the team solving algorithm and data structures.
