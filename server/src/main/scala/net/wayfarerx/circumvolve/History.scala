@@ -1,7 +1,7 @@
 /*
- * Team.scala
+ * History.scala
  *
- * Copyright 2018 wayfarerx <x@wayfarerx.net> (@thewayfarerx)
+ * Copyright 2017 wayfarerx <x@wayfarerx.net> (@thewayfarerx)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,9 @@
 
 package net.wayfarerx.circumvolve
 
-import scala.collection.immutable.ListMap
-
 /**
- * A team of users assigned to roles.
+ * The history of teams that were created for an event.
  *
- * @param members The collection of users assigned to each role.
+ * @param teams The sets of teams that were created for an event, most-recent first.
  */
-case class Team(members: ListMap[Role, Vector[User]] = ListMap())
+case class History (teams: Vector[Set[Team]] = Vector())

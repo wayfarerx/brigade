@@ -42,15 +42,16 @@ class LedgerSpec extends FlatSpec with Matchers {
 
   it should "build rosters from simple ledgers" in {
     Ledger(
-      Ledger.Entry(1, Command.Assign(Vector(bob -> tank))),
-      Ledger.Entry(2, Command.Assign(Vector(sue -> healer))),
-      Ledger.Entry(3, Command.Volunteer(bob, Vector(healer, dps))),
-      Ledger.Entry(4, Command.Volunteer(sue, Vector(tank))),
-      Ledger.Entry(5, Command.Volunteer(jim, Vector(dps))),
-      Ledger.Entry(6, Command.Volunteer(kim, Vector(healer, dps))),
-      Ledger.Entry(7, Command.Release(Set(bob))),
-      Ledger.Entry(8, Command.Drop(bob, Vector(healer)))
-    ).toRoster(slots) shouldBe Roster(
+      Ledger.Entry(1, Command.Assign(bob, tank)),
+      Ledger.Entry(2, Command.Assign(sue, healer)),
+      Ledger.Entry(3, Command.Volunteer(bob, healer), Command.Volunteer(bob, dps)),
+      Ledger.Entry(4, Command.Volunteer(sue, tank)),
+      Ledger.Entry(5, Command.Volunteer(jim, dps)),
+      Ledger.Entry(6, Command.Volunteer(kim, healer), Command.Volunteer(kim, dps)),
+      Ledger.Entry(7, Command.Release(bob)),
+      Ledger.Entry(8, Command.Drop(bob, healer)),
+      Ledger.Entry(9, Command.DropAll(jim))
+    ).buildRoster(slots) shouldBe Roster(
       slots,
       Vector(
         sue -> healer
@@ -58,7 +59,6 @@ class LedgerSpec extends FlatSpec with Matchers {
       Vector(
         bob -> dps,
         sue -> tank,
-        jim -> dps,
         kim -> healer,
         kim -> dps
       )
@@ -67,20 +67,20 @@ class LedgerSpec extends FlatSpec with Matchers {
 
   it should "build rosters from complex ledgers with edits" in {
     Ledger(
-      /*Ledger.Entry(1, Command.Assign(Vector(bob -> tank))),
-      Ledger.Entry(2, Command.Assign(Vector(sue -> healer))),*/
-      Ledger.Entry(3, Command.Volunteer(bob, Vector(healer, dps))),
-      Ledger.Entry(4, Command.Volunteer(sue, Vector(tank))),
-      Ledger.Entry(5, Command.Volunteer(jim, Vector(dps))),
-      Ledger.Entry(6, Command.Volunteer(kim, Vector(healer, dps))),
-      //Ledger.Entry(1, Command.Assign(Vector(bob -> dps))),
-      Ledger.Entry(3, Command.Volunteer(bob, Vector(tank, dps)))
-    ).toRoster(slots) shouldBe Roster(
+      Ledger.Entry(1, Command.Assign(bob, tank)),
+      Ledger.Entry(2, Command.Assign(sue, healer)),
+      Ledger.Entry(3, Command.Volunteer(bob, healer), Command.Volunteer(bob, dps)),
+      Ledger.Entry(4, Command.Volunteer(sue, tank)),
+      Ledger.Entry(5, Command.Volunteer(jim, dps)),
+      Ledger.Entry(6, Command.Volunteer(kim, healer), Command.Volunteer(kim, dps)),
+      Ledger.Entry(1, Command.Assign(bob, dps)),
+      Ledger.Entry(3, Command.Volunteer(bob, tank), Command.Volunteer(bob, dps))
+    ).buildRoster(slots) shouldBe Roster(
       slots,
-      Vector(/*
+      Vector(
         sue -> healer,
         bob -> dps
-      */),
+      ),
       Vector(
         bob -> dps,
         sue -> tank,

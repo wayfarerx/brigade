@@ -15,7 +15,7 @@ case class Ledger(entries: Vector[Ledger.Entry]) {
    * @param slots The mapping of roles to the number of users needed in that role.
    * @return A roster constructed from this ledger.
    */
-  def toRoster(slots: ListMap[Role, Int]): Roster = {
+  def buildRoster(slots: ListMap[Role, Int]): Roster = {
     val instructions = entries.zipWithIndex.groupBy(_._1.messageId).values.flatMap { edits =>
       (Vector[(Entry, Int)]() /: edits) { (state, edit) =>
         val (incoming, incomingIndex) = edit
@@ -29,12 +29,11 @@ case class Ledger(entries: Vector[Ledger.Entry]) {
     }.toVector.sortBy(_._2).map(_._1)
     (Roster(slots) /: instructions.flatMap(_.commands)) { (roster, command) =>
       command match {
-        case Command.Assign(assignments) => roster.copy(assignments = roster.assignments ++ assignments)
-        case Command.Release(users) => roster.copy(assignments = roster.assignments filterNot (users contains _._1))
-        case Command.Volunteer(user, roles) => roster.copy(volunteers = roster.volunteers ++ roles.map(user -> _))
-        case Command.Drop(user, roles) =>
-          if (roles.isEmpty) roster.copy(volunteers = roster.volunteers filterNot (_._1 == user))
-          else roster.copy(volunteers = roster.volunteers filterNot roles.map(user -> _).toSet)
+        case Command.Assign(user, role) => roster.copy(assignments = roster.assignments :+ (user, role))
+        case Command.Release(user) => roster.copy(assignments = roster.assignments filterNot (_._1 == user))
+        case Command.Volunteer(user, role) => roster.copy(volunteers = roster.volunteers :+ (user, role))
+        case Command.Drop(user, role) => roster.copy(volunteers = roster.volunteers filterNot (_ == (user, role)))
+        case Command.DropAll(user) => roster.copy(volunteers = roster.volunteers filterNot (_._1 == user))
       }
     }
   }

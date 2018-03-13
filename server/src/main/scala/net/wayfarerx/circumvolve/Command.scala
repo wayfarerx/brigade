@@ -28,12 +28,6 @@ sealed trait Command
  */
 object Command {
 
-  def extract(message: Message): Vector[Command] = {
-
-
-    ???
-  }
-
   /**
    * Opens a roster with the specified roles and counts.
    *
@@ -66,31 +60,39 @@ object Command {
   /**
    * Assigns users to the specified roles.
    *
-   * @param assignments The collection of users and their assigned roles.
+   * @param user The user to assign.
+   * @param role The role to assign the user to.
    */
-  case class Assign(assignments: Vector[(User, Role)]) extends Mutation
+  case class Assign(user: User, role: Role) extends Mutation
 
   /**
-   * Releases the specified users from their assigned roles.
+   * Releases the specified user from any assigned roles.
    *
-   * @param users The users to be released.
+   * @param user The user to be released.
    */
-  case class Release(users: Set[User]) extends Mutation
+  case class Release(user: User) extends Mutation
 
   /**
-   * Volunteers the specified user for the supplied roles.
+   * Volunteers the specified user for the supplied role.
    *
-   * @param user  The user that is volunteering.
-   * @param roles The roles that are being volunteered for.
+   * @param user The user that is volunteering.
+   * @param role The role that is being volunteered for.
    */
-  case class Volunteer(user: User, roles: Vector[Role]) extends Mutation
+  case class Volunteer(user: User, role: Role) extends Mutation
 
   /**
-   * Drops a user from certain roles in the in-progress roster.
+   * Drops a user from the specified volunteered role.
    *
-   * @param user  The user that is dropping.
-   * @param roles The roles to drop or empty to drop all roles.
+   * @param user The user that is dropping.
+   * @param role The roles to drop.
    */
-  case class Drop(user: User, roles: Vector[Role]) extends Mutation
+  case class Drop(user: User, role: Role) extends Mutation
+
+  /**
+   * Drops a user from the any volunteered roles.
+   *
+   * @param user The user that is dropping.
+   */
+  case class DropAll(user: User) extends Mutation
 
 }

@@ -52,7 +52,7 @@ object Solver {
   private def solve(team: Team, openings: Map[Role, Int], candidates: Vector[Candidate]): Team =
     selectRole(openings, candidates) match {
       case Some(role) =>
-        val member = fillRole(role, candidates)
+        val member = chooseMember(candidates filter (_.role == role))
         solve(team.add(role, member),
           openings + (role -> (openings(role) - 1)),
           candidates filterNot (_.member == member))
@@ -82,16 +82,6 @@ object Solver {
       if (deltas.isEmpty) None else Some(deltas.maxBy(_._2)._1)
     }
   }
-
-  /**
-   * Chooses a member to fill a role from the specified candidates.
-   *
-   * @param role The role to fill.
-   * @param candidates The candidates to choose from.
-   * @return A member to fill the specified role.
-   */
-  private def fillRole(role: Role, candidates: Vector[Candidate]): User =
-    chooseMember(candidates filter (_.role == role))
 
   /**
    * Choose a member at or above the current depth or continue down.
