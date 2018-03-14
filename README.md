@@ -1,6 +1,6 @@
-# circumvolve
+# brigade
 
-Circumvolve is a Discord bot that tries to assist in building
+Brigade is a Discord bot that tries to assist in building
 optimal-but-fair teams on a repeating basis. The basic idea is that
 *administrators* set up a roster specifying what *roles* they require
 and how many *members* they require for each role. For example: a
@@ -10,7 +10,7 @@ traditional MMO dungeon group would look something like:
  - 1 Healer
  - 2 Damage dealers
  
-Circumvolve enables administrators to ask for these roles to be filled
+Brigade enables administrators to ask for these roles to be filled
 and allows members to volunteer to fill those roles, all without any
 other direct human intervention.
 
@@ -34,13 +34,13 @@ other direct human intervention.
 
 ## Initial Setup
 
-Setting up your Discord server to use circumvolve consists of inviting
+Setting up your Discord server to use brigade consists of inviting
 the bot, configuring your server's permissions and specifying which
 channels the bot can communicate on.
 
 ### Inviting and Configuring
 
-Currently, the only way to invite circumvolve to your server is to
+Currently, the only way to invite brigade to your server is to
 contact wayfarerx, but don't do that. This is still alpha software and
 if you don't already have access you're unlikely to get it.
 
@@ -130,9 +130,9 @@ Running some hard mode dungeons this Thursday at 7:00 pm eastern!
 !open !tank 1 !healer 1 !dps 2
 ```
 
-When you first open an event, Circumvolve will post a message containing
+When you first open an event, Brigade will post a message containing
 the initial team load out. As the users that have volunteered or been
-assigned to the team change Circumvolve will update that message with
+assigned to the team change Brigade will update that message with
 the new team load out.
 
 ### Aborting an Event
@@ -181,7 +181,7 @@ until a new roster has been opened.
 
 Any user that can send messages to an event channel can volunteer for
 one or more roles and can also change their minds later and drop out
-of those roles. Circumvolve remembers the order that you specify what
+of those roles. Brigade remembers the order that you specify what
 roles you volunteer for and assumes that you volunteered for your most
 desirable role first and any backup roles after that.
 
@@ -420,12 +420,12 @@ of this bot might allow for more customization in this regard.
 
 ## Upcoming Features
 
-As cool as Circumvolve is, it could always do more:
+As cool as Brigade is, it could always do more:
 
  - [Allowing guild owners or administrators to influence the historical
-   scoring algorithm on a per-channel basis.](https://github.com/wayfarerx/circumvolve/issues/3)
+   scoring algorithm on a per-channel basis.](https://github.com/wayfarerx/brigade/issues/3)
  - [Supporting the construction of multiple teams in the case that there
-   are enough volunteers to do so.](https://github.com/wayfarerx/circumvolve/issues/4)
+   are enough volunteers to do so.](https://github.com/wayfarerx/brigade/issues/4)
  - Anything else you can think of! Just open an issue
-   [here on GitHub](https://github.com/wayfarerx/circumvolve/issues/new)
+   [here on GitHub](https://github.com/wayfarerx/brigade/issues/new)
    or hit me up on Discord: @wayfarerx.

@@ -16,7 +16,7 @@ lazy val common = Seq(
 lazy val server = (project in file("server")).
   settings(common,
 
-    name := "circumvolve-server",
+    name := "brigade-server",
 
     libraryDependencies += cats,
     libraryDependencies += akka,
@@ -28,7 +28,7 @@ lazy val server = (project in file("server")).
     libraryDependencies += akkaTest,
     libraryDependencies += scalaTest,
 
-    mainClass in assembly := Some("net.wayfarerx.circumvolve.main.Circumvolve"),
-    assemblyJarName in assembly := "circumvolve.jar"
+    mainClass in assembly := Some("net.wayfarerx.brigade.main.Brigade"),
+    assemblyJarName in assembly := "brigade.jar"
 
   )
