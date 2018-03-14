@@ -30,12 +30,9 @@ case class Message(author: User, tokens: Vector[Message.Token]) {
 
   import Message._
 
-  /**
-   * Parses this message into a sequence of commands.
-   *
-   * @return The parsed sequence of commands.
-   */
-  def commands: Vector[Command] = {
+  /** This message parsed into a sequence of commands. */
+  lazy val commands: Vector[Command] = {
+
     val input = tokens.iterator.buffered
 
     /* Attempt to read a single user from the input. */
@@ -92,65 +89,60 @@ case class Message(author: User, tokens: Vector[Message.Token]) {
         case None => prefix
       }
 
-    var output = Vector[Command]()
-
     /* Scan the entirety of this message and extracts all commands. */
     @annotation.tailrec
-    def scan(): Unit = if (input.hasNext) {
-      input.next() match {
+    def scan(prefix: Vector[Command]): Vector[Command] = if (!input.hasNext) prefix else input.next() match {
 
-        case Word(tag) if tag.equalsIgnoreCase("!event") =>
-          output :+= Command.Event(readUsers().toSet)
+      case Word(tag) if tag.equalsIgnoreCase("!event") =>
+        scan(prefix :+ Command.Event(readUsers().toSet))
 
-        case Word(tag) if tag.equalsIgnoreCase("!open") =>
-          val slots = readSlots()
-          if (slots.nonEmpty) output :+= Command.Open(slots)
+      case Word(tag) if tag.equalsIgnoreCase("!open") =>
+        val slots = readSlots()
+        scan(if (slots.isEmpty) prefix else prefix :+ Command.Open(slots))
 
-        case Word(tag) if tag.equalsIgnoreCase("!abort") =>
-          output :+= Command.Abort
+      case Word(tag) if tag.equalsIgnoreCase("!abort") =>
+        scan(prefix :+ Command.Abort)
 
-        case Word(tag) if tag.equalsIgnoreCase("!close") =>
-          output :+= Command.Close
+      case Word(tag) if tag.equalsIgnoreCase("!close") =>
+        scan(prefix :+ Command.Close)
 
-        case Word(tag) if tag.equalsIgnoreCase("!help") =>
-          output :+= Command.Help
+      case Word(tag) if tag.equalsIgnoreCase("!help") =>
+        scan(prefix :+ Command.Help)
 
-        case Word(tag) if tag.equalsIgnoreCase("!?") =>
-          output :+= Command.Query(readUser() getOrElse author)
+      case Word(tag) if tag.equalsIgnoreCase("!?") =>
+        scan(prefix :+ Command.Query(readUser() getOrElse author))
 
-        case Word(tag) if tag.equalsIgnoreCase("!assign") =>
-          output ++= readAssignments() map Command.Assign.tupled
+      case Word(tag) if tag.equalsIgnoreCase("!assign") =>
+        scan(prefix ++ readAssignments().map(Command.Assign.tupled))
 
-        case Word(tag) if tag.equalsIgnoreCase("!release") =>
-          output ++= readUsers() map Command.Release
+      case Word(tag) if tag.equalsIgnoreCase("!release") =>
+        scan(prefix ++ readUsers().map(Command.Release))
 
-        case Word(tag) if tag.equalsIgnoreCase("!offer") =>
-          output ++= readUser().toVector flatMap (u => readRoles() map (Command.Volunteer(u, _)))
+      case Word(tag) if tag.equalsIgnoreCase("!offer") =>
+        scan(prefix ++ readUser().toVector.flatMap(u => readRoles() map (Command.Volunteer(u, _))))
 
-        case Word(tag) if tag.equalsIgnoreCase("!kick") =>
-          output ++= readUser().toVector flatMap { user =>
-            readRoles() match {
-              case roles if roles.isEmpty => Vector(Command.DropAll(user))
-              case roles => roles map (Command.Drop(user, _))
-            }
+      case Word(tag) if tag.equalsIgnoreCase("!kick") =>
+        scan(prefix ++ readUser().toVector.flatMap { user =>
+          readRoles() match {
+            case roles if roles.isEmpty => Vector(Command.DropAll(user))
+            case roles => roles map (Command.Drop(user, _))
           }
+        })
 
-        case Word(tag) if tag.equalsIgnoreCase("!drop") => readRoles() match {
-          case roles if roles.isEmpty => output :+= Command.DropAll(author)
-          case roles => output ++= roles map (Command.Drop(author, _))
-        }
+      case Word(tag) if tag.equalsIgnoreCase("!drop") => scan(prefix ++ (readRoles() match {
+        case roles if roles.isEmpty => Vector(Command.DropAll(author))
+        case roles => roles map (Command.Drop(author, _))
+      }))
 
-        case Word(role) if role.startsWith("!") && role.length > 1 =>
-          output :+= Command.Volunteer(author, Role(role substring 1))
+      case Word(role) if role.startsWith("!") && role.length > 1 =>
+        scan(prefix :+ Command.Volunteer(author, Role(role substring 1)))
 
-        case _ =>
+      case _ =>
+        scan(prefix)
 
-      }
-      scan()
     }
 
-    scan()
-    output
+    scan(Vector())
   }
 
 }
