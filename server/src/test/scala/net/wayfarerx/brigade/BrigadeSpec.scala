@@ -1,5 +1,5 @@
 /*
- * LedgerSpec.scala
+ * BrigadeSpec.scala
  *
  * Copyright 2017 wayfarerx <x@wayfarerx.net> (@thewayfarerx)
  *
@@ -18,14 +18,16 @@
 
 package net.wayfarerx.brigade
 
+import language.implicitConversions
+
 import org.scalatest._
 
 /**
- * Test case for the ledger.
+ * Test case for the brigade.
  */
-class LedgerSpec extends FlatSpec with Matchers {
+class BrigadeSpec extends FlatSpec with Matchers {
 
-  behavior of "Ledger"
+  behavior of "Brigade"
 
   private val bob = User(1)
   private val sue = User(2)
@@ -36,7 +38,26 @@ class LedgerSpec extends FlatSpec with Matchers {
   private val healer = Role("healer")
   private val dps = Role("dps")
 
-  it should "build rosters from simple ledgers" in {
+  implicit def mentions(user: User): Vector[Message.Token] = Vector(Message.Mention(user))
+
+  implicit def words(value: String): Vector[Message.Token] = value.trim.split("""\s+""").map(Message.Word).toVector
+
+  def msg(tokens: Vector[Message.Token]*): Vector[Message.Token] = (Vector[Message.Token]() /: tokens)(_ ++ _)
+
+
+  it should "build ledgers from message streams" in {
+    ((Brigade.Inactive: Brigade) /: Vector(
+      Message(Message.Id(0), 0, bob, msg("!open !tank 1 !healer 1 !dps 2")),
+      Message(Message.Id(1), 1, bob, msg("!assign", bob, "!tank")),
+      Message(Message.Id(2), 2, sue, msg("!assign", sue, "!healer")),
+      Message(Message.Id(3), 3, bob, msg("!healer !dps")),
+      Message(Message.Id(4), 4, sue, msg("!tank")),
+      Message(Message.Id(5), 5, jim, msg("!offer", jim, "!dps")),
+      Message(Message.Id(6), 6, kim, msg("!offer", kim, "!healer !offer", kim, "!dps")),
+      Message(Message.Id(7), 7, bob, msg("!release", bob)),
+      Message(Message.Id(8), 8, bob, msg("!drop !healer")),
+      Message(Message.Id(9), 9, jim, msg("!kick", jim))
+    )) ((previous, message) => previous(message).brigade)
     Ledger(
       Ledger.Entry(Message.Id(1), Command.Assign(bob, tank)),
       Ledger.Entry(Message.Id(2), Command.Assign(sue, healer)),
@@ -58,46 +79,6 @@ class LedgerSpec extends FlatSpec with Matchers {
         (kim, dps, 1)
       )
     )
-  }
-
-  it should "build rosters from complex ledgers with edits" in {
-    Ledger(
-      Ledger.Entry(Message.Id(1), Command.Assign(bob, tank)),
-      Ledger.Entry(Message.Id(2), Command.Assign(sue, healer)),
-      Ledger.Entry(Message.Id(3), Command.Volunteer(bob, healer), Command.Volunteer(bob, dps)),
-      Ledger.Entry(Message.Id(4), Command.Volunteer(sue, tank)),
-      Ledger.Entry(Message.Id(5), Command.Volunteer(jim, dps)),
-      Ledger.Entry(Message.Id(6), Command.Volunteer(kim, healer), Command.Volunteer(kim, dps)),
-      Ledger.Entry(Message.Id(1), Command.Assign(bob, dps)),
-      Ledger.Entry(Message.Id(3), Command.Volunteer(bob, tank), Command.Volunteer(bob, dps))
-    ).buildRoster() shouldBe Roster(
-      Vector(
-        sue -> healer,
-        bob -> dps
-      ),
-      Vector(
-        (bob, dps, 1),
-        (sue, tank, 0),
-        (jim, dps, 0),
-        (kim, healer, 0),
-        (kim, dps, 1),
-        (bob, tank, 0)
-      )
-    )
-  }
-
-  it should "preserve user preference after edits" in {
-    Ledger(
-      Ledger.Entry(Message.Id(1), Command.Volunteer(bob, tank), Command.Volunteer(bob, healer)),
-      Ledger.Entry(Message.Id(1), Command.Volunteer(bob, healer), Command.Volunteer(bob, tank))
-    ).buildRoster() shouldBe Roster(
-      Vector(),
-      Vector(
-        (bob, tank, 1),
-        (bob, healer, 0)
-      )
-    )
-
   }
 
 }

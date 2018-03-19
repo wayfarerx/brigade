@@ -28,7 +28,7 @@ import net.wayfarerx.brigade.service.{Connection, Storage}
 /**
  * Main entry point for the bot.
  */
-object Brigade {
+object BrigadeMain {
 
   /**
    * Main entry point for the bot.

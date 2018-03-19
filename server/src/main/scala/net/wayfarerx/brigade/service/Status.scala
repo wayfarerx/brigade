@@ -32,7 +32,7 @@ sealed trait Status {
   def channelId: String
 
   /** The ID of the message this status pertains to. */
-  def messageId: String
+  def msgId: String
 
 }
 
@@ -46,11 +46,11 @@ object Status {
    *
    * @param guildId   The ID of the guild this status pertains to.
    * @param channelId The ID of the channel this status pertains to.
-   * @param messageId The ID of the message this status pertains to.
+   * @param msgId The ID of the message this status pertains to.
    * @param member    The member that was queried.
    * @param roles     The roles that the queried member has volunteered for.
    */
-  case class Response(guildId: String, channelId: String, messageId: String,
+  case class Response(guildId: String, channelId: String, msgId: String,
     member: User, roles: Vector[Role]) extends Status
 
   /**
@@ -63,11 +63,11 @@ object Status {
    *
    * @param guildId   The ID of the guild this status pertains to.
    * @param channelId The ID of the channel this status pertains to.
-   * @param messageId The ID of the message this status pertains to.
+   * @param msgId The ID of the message this status pertains to.
    * @param roster    The roster for the event.
    * @param team      The team assembled for the event.
    */
-  case class Opened(guildId: String, channelId: String, messageId: String, roster: Roster, team: Team)
+  case class Opened(guildId: String, channelId: String, msgId: String, roster: Roster, team: Team)
     extends TeamStatus
 
   /**
@@ -75,11 +75,11 @@ object Status {
    *
    * @param guildId   The ID of the guild this status pertains to.
    * @param channelId The ID of the channel this status pertains to.
-   * @param messageId The ID of the message this status pertains to.
+   * @param msgId The ID of the message this status pertains to.
    * @param roster    The roster for the event.
    * @param team      The team assembled for the event.
    */
-  case class Updated(guildId: String, channelId: String, messageId: String, roster: Roster, team: Team)
+  case class Updated(guildId: String, channelId: String, msgId: String, roster: Roster, team: Team)
     extends TeamStatus
 
   /**
@@ -87,11 +87,11 @@ object Status {
    *
    * @param guildId   The ID of the guild this status pertains to.
    * @param channelId The ID of the channel this status pertains to.
-   * @param messageId The ID of the message this status pertains to.
+   * @param msgId The ID of the message this status pertains to.
    * @param roster    The roster for the event.
    * @param team      The team assembled for the event.
    */
-  case class Closed(guildId: String, channelId: String, messageId: String, roster: Roster, team: Team)
+  case class Closed(guildId: String, channelId: String, msgId: String, roster: Roster, team: Team)
     extends TeamStatus
 
   /**
@@ -99,8 +99,8 @@ object Status {
    *
    * @param guildId   The ID of the guild this status pertains to.
    * @param channelId The ID of the channel this status pertains to.
-   * @param messageId The ID of the message this status pertains to.
+   * @param msgId The ID of the message this status pertains to.
    */
-  case class Aborted(guildId: String, channelId: String, messageId: String) extends TeamStatus
+  case class Aborted(guildId: String, channelId: String, msgId: String) extends TeamStatus
 
 }

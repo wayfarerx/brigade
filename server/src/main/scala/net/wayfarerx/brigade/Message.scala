@@ -18,15 +18,17 @@
 
 package net.wayfarerx.brigade
 
-import scala.collection.immutable.ListMap
+import collection.immutable.ListMap
 
 /**
  * Describes a message handled by the system.
  *
- * @param author The author of this message.
- * @param tokens The tokens contained in the message.
+ * @param id          The ID of this message.
+ * @param timestampMs The instant that this message was last updated.
+ * @param author      The author of this message.
+ * @param tokens      The tokens contained in this message.
  */
-case class Message(author: User, tokens: Vector[Message.Token]) {
+case class Message(id: Message.Id, timestampMs: Long, author: User, tokens: Vector[Message.Token]) {
 
   import Message._
 
@@ -151,6 +153,44 @@ case class Message(author: User, tokens: Vector[Message.Token]) {
  * Definitions of the message tokens.
  */
 object Message {
+
+  /**
+   * Creates a message handled by the system.
+   *
+   * @param id          The ID of the message.
+   * @param timestampMs The instant that the message was last updated.
+   * @param author      The author of the message.
+   * @param tokens      The tokens contained in the message.
+   */
+  def apply(id: Message.Id, timestampMs: Long, author: User, tokens: Message.Token*): Message =
+    Message(id, timestampMs, author, tokens.toVector)
+
+  /**
+   * The ID of a message.
+   *
+   * @param value The underlying message ID value.
+   */
+  final class Id private(val value: Long) extends AnyVal {
+
+    /* Convert to a string. */
+    override def toString: String = s"Message.Id($value)"
+
+  }
+
+  /**
+   * Factory for message IDs.
+   */
+  object Id {
+
+    /**
+     * Creates a new message ID.
+     *
+     * @param value The underlying message ID value.
+     * @return a new message ID.
+     */
+    def apply(value: Long): Id = new Id(value)
+
+  }
 
   /**
    * Base type for message tokens.

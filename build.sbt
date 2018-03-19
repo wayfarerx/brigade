@@ -28,7 +28,7 @@ lazy val server = (project in file("server")).
     libraryDependencies += akkaTest,
     libraryDependencies += scalaTest,
 
-    mainClass in assembly := Some("net.wayfarerx.brigade.main.Brigade"),
+    mainClass in assembly := Some("net.wayfarerx.brigade.main.BrigadeMain"),
     assemblyJarName in assembly := "brigade.jar"
 
   )

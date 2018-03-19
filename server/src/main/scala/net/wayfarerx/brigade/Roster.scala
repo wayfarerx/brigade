@@ -23,29 +23,29 @@ import scala.collection.immutable.ListMap
 /**
  * A roster describing the rules for building teams.
  *
- * @param slots       The mapping of roles to the number of users needed in that role.
  * @param assignments The user and role assignments in the order they occurred.
- * @param volunteers  The user and role volunteers in the order they occurred.
+ * @param volunteers  The user and role volunteers along with the user's preference.
  */
 case class Roster(
-  slots: ListMap[Role, Int],
   assignments: Vector[(User, Role)] = Vector(),
-  volunteers: Vector[(User, Role)] = Vector()
+  volunteers: Vector[(User, Role, Int)] = Vector()
 ) {
 
   /**
    * Builds teams by first normalizing this roster then recursively building teams.
    *
+   * @param slots  The mapping of roles to the number of users needed in that role.
    * @param config The build configuration.
    * @return The collection of teams that were built and the users that were left unassigned.
    */
-  def buildTeams(config: Roster.Config): (Vector[Team], Vector[User]) = {
+  def buildTeams(slots: ListMap[Role, Int], config: Roster.Config): (Vector[Team], Vector[User]) = {
     val _slots = slots filter (_._2 > 0)
     val assigned = collection.mutable.HashSet[User]()
     var assign = Vector[(User, Role)]()
     for ((user, role) <- assignments) if (_slots.contains(role) && assigned.add(user)) assign :+= user -> role
     Roster.build(
-      Roster(_slots, assign, volunteers.filter(v => (_slots contains v._2) && !(assigned contains v._1)).distinct),
+      Roster(assign, volunteers.filter(v => (_slots contains v._2) && !(assigned contains v._1)).distinct),
+      _slots,
       config,
       Vector()
     )
@@ -88,26 +88,31 @@ object Roster {
    * Recursivly builds as many teams as possible from the given roster and configuration.
    *
    * @param roster   The roster to build from.
+   * @param slots    The mapping of roles to the number of users needed in that role.
    * @param config   The configuration to honor.
    * @param previous The previously built teams.
    * @return The collection of teams and the unassigned users.
    */
   @annotation.tailrec
-  private def build(roster: Roster, config: Roster.Config, previous: Vector[Team]): (Vector[Team], Vector[User]) = {
+  private def build(
+    roster: Roster,
+    slots: ListMap[Role, Int],
+    config: Roster.Config,
+    previous: Vector[Team]
+  ): (Vector[Team], Vector[User]) = {
     val assignedRoles = roster.assignments.groupBy(_._2).mapValues(_.map(_._1))
-    val assigned = roster.slots map { case (k, v) => k -> assignedRoles.getOrElse(k, Vector()).take(v) }
+    val assigned = slots map { case (k, v) => k -> assignedRoles.getOrElse(k, Vector()).take(v) }
     Roster.Candidate.solve(
       Team(assigned),
-      roster.slots map { case (k, v) => k -> (v - assigned(k).length) },
+      slots map { case (k, v) => k -> (v - assigned(k).length) },
       Candidate.from(roster.volunteers, config)
     ) match {
       case Some(team) =>
         val members = team.members.values.flatten.toSet
         build(Roster(
-          roster.slots,
           roster.assignments filterNot (members contains _._1),
           roster.volunteers filterNot (members contains _._1)
-        ), config, previous :+ team)
+        ), slots, config, previous :+ team)
       case None =>
         previous -> (roster.assignments.map(_._1) ++ roster.volunteers.map(_._1)).distinct
     }
@@ -121,7 +126,7 @@ object Roster {
    * @param score      The score derived from previous teams where the member filled the specified role.
    * @param preference The preference that the member showed for the specified role.
    */
-  private case class Candidate(user: User, role: Role, score: Int, preference: Int)
+  private case class Candidate(user: User, role: Role, score: Int, preference: Double)
 
   /**
    * Factory for collections of candidates.
@@ -135,17 +140,15 @@ object Roster {
      * @param config     The configuration for scoring the history of member participation in the event.
      * @return A collection of candidates for the event.
      */
-    private[Roster] def from(volunteers: Vector[(User, Role)], config: Config): Vector[Candidate] = {
-      val preferences = volunteers.groupBy(_._1).mapValues(_.map(_._2).zipWithIndex.toMap)
-      val candidates = for ((user, role) <- volunteers) yield {
+    private[Roster] def from(volunteers: Vector[(User, Role, Int)], config: Config): Vector[Candidate] = {
+      for ((user, role, preference) <- volunteers) yield {
         val score = config match {
           case Fill => 0
           case scores@Rotate(_) => scores.scoring.getOrElse(user -> role, 0)
         }
-        Candidate(user, role, score, preferences(user)(role))
+        Candidate(user, role, score, preference)
       }
-      candidates sortBy (_.score)
-    }
+    } sortBy (_.score)
 
     /**
      * Attempts to fill all of the specified openings on the supplied team from a collection of candidates.

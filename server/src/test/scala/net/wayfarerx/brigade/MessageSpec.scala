@@ -18,6 +18,8 @@
 
 package net.wayfarerx.brigade
 
+import java.time.Instant
+
 import collection.JavaConverters._
 import java.util.StringTokenizer
 
@@ -95,10 +97,14 @@ class MessageSpec extends FlatSpec with Matchers {
 
   private def mention(user: User): String = s"<@${user.id}>"
 
-  private def useMessage(author: User, string: String): Message =
-    Message(author, new StringTokenizer(string).asScala.map(_.toString.trim).map {
+  private def useMessage(author: User, string: String): Message = Message(
+    Message.Id(0),
+    System.currentTimeMillis,
+    author,
+    new StringTokenizer(string).asScala.map(_.toString.trim).map {
       case MentionFormat(id) => Message.Mention(User(id.toLong))
       case word => Message.Word(word)
-    }.toVector)
+    }.toVector
+  )
 
 }

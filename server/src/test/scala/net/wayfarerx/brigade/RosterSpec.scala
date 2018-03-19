@@ -50,17 +50,16 @@ class RosterSpec extends FlatSpec with Matchers {
 
   it should "build 4-person groups" in {
     val roster = Roster(
-      ListMap(tank -> 1, heal -> 1, dps -> 2),
       Vector(amy -> tank),
       Vector(
-        bob -> heal,
-        jim -> dps,
-        sam -> dps,
-        sue -> heal,
-        sue -> dps
+        (bob, heal, 0),
+        (jim, dps, 0),
+        (sam, dps, 0),
+        (sue, heal, 0),
+        (sue, dps, 1)
       )
     )
-    val (teams, unassigned) = roster.buildTeams(Roster.Fill)
+    val (teams, unassigned) = roster.buildTeams(ListMap(tank -> 1, heal -> 1, dps -> 2), Roster.Fill)
     teams shouldBe Vector(Team(ListMap(
       tank -> Vector(amy),
       heal -> Vector(bob),
@@ -71,26 +70,25 @@ class RosterSpec extends FlatSpec with Matchers {
 
   it should "build 12-person groups" in {
     val roster = Roster(
-      ListMap(tank -> 2, heal -> 2, dps -> 8),
       Vector(amy -> tank, ann -> heal, ben -> dps, bob -> dps),
       Vector(
-        gus -> tank,
-        ida -> heal,
-        jim -> dps,
-        leo -> dps,
-        liz -> dps,
-        may -> tank,
-        may -> dps,
-        rod -> heal,
-        rod -> dps,
-        sam -> dps,
-        sue -> tank,
-        sue -> dps,
-        zoe -> heal,
-        zoe -> dps
+        (gus, tank, 0),
+        (ida, heal, 0),
+        (jim, dps, 0),
+        (leo, dps, 0),
+        (liz, dps, 0),
+        (may, tank, 0),
+        (may, dps, 1),
+        (rod, heal, 0),
+        (rod, dps, 1),
+        (sam, dps, 0),
+        (sue, tank, 0),
+        (sue, dps, 1),
+        (zoe, heal, 0),
+        (zoe, dps, 1)
       )
     )
-    val (teams, unassigned) = roster.buildTeams(Roster.Fill)
+    val (teams, unassigned) = roster.buildTeams(ListMap(tank -> 2, heal -> 2, dps -> 8), Roster.Fill)
     teams shouldBe Vector(Team(ListMap(
       tank -> Vector(amy, gus),
       heal -> Vector(ann, ida),
@@ -102,17 +100,19 @@ class RosterSpec extends FlatSpec with Matchers {
   it should "score candidates based on history" in {
     val oldTeam = Team(ListMap(tank -> Vector(amy), heal -> Vector(ann), dps -> Vector(ben, bob)))
     val roster = Roster(
-      ListMap(tank -> 1, heal -> 1, dps -> 2),
       Vector(amy -> tank),
       Vector(
-        ann -> heal,
-        ben -> dps,
-        bob -> dps,
-        sue -> heal,
-        sue -> dps
+        (ann, heal, 0),
+        (ben, dps, 0),
+        (bob, dps, 0),
+        (sue, heal, 0),
+        (sue, dps, 1)
       )
     )
-    val (teams, unassigned) = roster.buildTeams(Roster.Rotate(History(Vector(Set(oldTeam)))))
+    val (teams, unassigned) = roster.buildTeams(
+      ListMap(tank -> 1, heal -> 1, dps -> 2),
+      Roster.Rotate(History(Vector(Set(oldTeam))))
+    )
     teams shouldBe Vector(Team(ListMap(
       tank -> Vector(amy),
       heal -> Vector(sue),
@@ -123,17 +123,16 @@ class RosterSpec extends FlatSpec with Matchers {
 
   it should "favor roles higher on the user preference list" in {
     val roster = Roster(
-      ListMap(tank -> 1, heal -> 1, dps -> 2),
       Vector(amy -> tank),
       Vector(
-        bob -> heal,
-        bob -> dps,
-        sue -> heal,
-        jim -> dps,
-        sam -> dps
+        (bob, heal, 0),
+        (bob, dps, 1),
+        (sue, heal, 0),
+        (jim, dps, 0),
+        (sam, dps, 0)
       )
     )
-    val (teams, unassigned) = roster.buildTeams(Roster.Fill)
+    val (teams, unassigned) = roster.buildTeams(ListMap(tank -> 1, heal -> 1, dps -> 2), Roster.Fill)
     teams shouldBe Vector(Team(ListMap(
       tank -> Vector(amy),
       heal -> Vector(bob),

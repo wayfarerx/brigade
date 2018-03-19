@@ -31,6 +31,11 @@ sealed trait Command
 object Command {
 
   /**
+   * Requests the help message.
+   */
+  case object Help extends Command
+
+  /**
    * Specifies a channel as hosting an event.
    *
    * @param admins The event administrators.
@@ -38,38 +43,63 @@ object Command {
   case class Event(admins: Set[User]) extends Command
 
   /**
+   * A specialization of command that begins, interacts with or ends an event.
+   */
+  sealed trait Lifecycle extends Command
+
+  /**
+   * Extractor for lifecycle commands.
+   */
+  object Lifecycle {
+
+    /** True for all lifecycle commands.*/
+    def unapply(lifecycle: Lifecycle): Boolean = true
+
+  }
+
+  /**
    * Opens a roster with the specified roles and counts.
    *
    * @param slots The mapping of required roles to the number of users needed per role.
    */
-  case class Open(slots: ListMap[Role, Int]) extends Command
+  case class Open(slots: ListMap[Role, Int]) extends Lifecycle
 
   /**
-   * Abandons any in-progress roster.
+   * A specialization of command that references an in-progress event.
    */
-  case object Abort extends Command
+  sealed trait Transaction extends Lifecycle
 
   /**
-   * Completes the in-progress roster and creates a team.
+   * Extractor for transaction commands.
    */
-  case object Close extends Command
+  object Transaction {
 
-  /**
-   * Requests the help message.
-   */
-  case object Help extends Command
+    /** True for all transaction commands.*/
+    def unapply(transaction: Transaction): Boolean = true
+
+  }
 
   /**
    * Queries the roles a user has volunteered for in the in-progress roster.
    *
    * @param user The user to query the volunteered roles for.
    */
-  case class Query(user: User) extends Command
+  case class Query(user: User) extends Transaction
 
   /**
-   * A specialization of command that changes an in-progress event.
+   * A specialization of transaction that changes an in-progress event.
    */
-  sealed trait Mutation extends Command
+  sealed trait Mutation extends Transaction
+
+  /**
+   * Extractor for mutation commands.
+   */
+  object Mutation {
+
+    /** True for all mutation commands.*/
+    def unapply(mutation: Mutation): Boolean = true
+
+  }
 
   /**
    * Assigns users to the specified roles.
@@ -108,5 +138,30 @@ object Command {
    * @param user The user that is dropping.
    */
   case class DropAll(user: User) extends Mutation
+
+  /**
+   * A specialization of command that terminates an in-progress event.
+   */
+  sealed trait Terminal extends Lifecycle
+
+  /**
+   * Extractor for terminal commands.
+   */
+  object Terminal {
+
+    /** True for all terminal commands. */
+    def unapply(terminal: Terminal): Boolean = true
+
+  }
+
+  /**
+   * Abandons any in-progress roster.
+   */
+  case object Abort extends Terminal
+
+  /**
+   * Completes the in-progress roster and creates a team.
+   */
+  case object Close extends Terminal
 
 }

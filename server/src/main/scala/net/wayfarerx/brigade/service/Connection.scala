@@ -201,8 +201,8 @@ class Connection(token: String, storage: Storage) extends Actor {
    */
   private def onStatus(status: Status): Unit = {
     client foreach { discord =>
-      val messageId = status.messageId.toLong
-      val message = discord.getMessageByID(messageId)
+      val msgId = status.msgId.toLong
+      val message = discord.getMessageByID(msgId)
       val author = User(message.getAuthor.getStringID)
       status match {
         case Status.Response(_, _, _, member, roles) =>
@@ -220,7 +220,7 @@ class Connection(token: String, storage: Storage) extends Actor {
               message.edit(Messages.aborted)
           }
           val channelId = message.getChannel.getLongID
-          messages get channelId foreach (_ - messageId foreach (discord.getMessageByID(_).delete()))
+          messages get channelId foreach (_ - msgId foreach (discord.getMessageByID(_).delete()))
           messages -= channelId
       }
     }
