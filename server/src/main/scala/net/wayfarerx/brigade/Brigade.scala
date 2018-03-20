@@ -83,9 +83,9 @@ object Brigade {
   /**
    * Runs the specified transactions against a ledger.
    *
-   * @param msgId The ID of the source message.
+   * @param msgId    The ID of the source message.
    * @param commands The transactions to run.
-   * @param ledger The ledger to run against.
+   * @param ledger   The ledger to run against.
    * @return The resulting ledger and any generated replies.
    */
   private def runTransactions(
@@ -97,9 +97,11 @@ object Brigade {
       case Command.Mutation() => true
       case Command.Query(_) => false
     }
-    val newLedger = ledger.copy(entries = ledger.entries :+ Ledger.Entry(msgId, mutations collect {
-      case cmd@Command.Mutation() => cmd
-    }: _*))
+    val newLedger = if (mutations.isEmpty) ledger else {
+      ledger.copy(entries = ledger.entries :+ Ledger.Entry(msgId, mutations collect {
+        case cmd@Command.Mutation() => cmd
+      }: _*))
+    }
     val roster = newLedger.buildRoster()
     newLedger -> queries.distinct.collect {
       case Command.Query(user) => Reply(
@@ -111,10 +113,38 @@ object Brigade {
   }
 
   /**
+   * Resumes an active brigade.
+   *
+   * @param msgId    The ID of the incoming message.
+   * @param commands The commands to process.
+   * @param ledger   The ledger to modify.
+   * @return Any terminal command, the modified ledger and any generated replies.
+   */
+  private def resume(
+    openMsgId: Message.Id,
+    slots: ListMap[Role, Int],
+    msgId: Message.Id,
+    commands: Vector[Command.Lifecycle],
+    config: Roster.Config,
+    ledger: Ledger
+  ): Outcome = {
+    val (transactions, terminal) = collectTransactions(commands)
+    val (newLedger, replies) = runTransactions(msgId, transactions, ledger)
+    terminal match {
+      case Some(Command.Close) =>
+        Outcome(Inactive, newLedger.buildRoster().buildTeams(slots, config), replies)
+      case Some(Command.Abort) =>
+        Outcome(Inactive, replies = replies)
+      case None =>
+        Outcome(Active(openMsgId, slots, newLedger), newLedger.buildRoster().buildTeams(slots, config), replies)
+    }
+  }
+
+  /**
    * The outcome of applying a message to a brigade.
    *
    * @param brigade The resulting brigade.
-   * @param teams The teams that were built.
+   * @param teams   The teams that were built.
    * @param replies The replies that were generated.
    */
   case class Outcome(
@@ -139,16 +169,7 @@ object Brigade {
       } match {
         case index if index >= 0 =>
           val slots = commands(index).asInstanceOf[Command.Open].slots
-          val (transactions, terminal) = collectTransactions(commands drop index + 1)
-          val (ledger, replies) = runTransactions(msgId, transactions, Ledger())
-          terminal match {
-            case Some(Command.Close) =>
-              Outcome(Inactive, ledger.buildRoster().buildTeams(slots, config)._1, replies)
-            case Some(Command.Abort) =>
-              Outcome(Inactive, replies = replies)
-            case None =>
-              Outcome(Active(msgId, slots, ledger), ledger.buildRoster().buildTeams(slots, config)._1, replies)
-          }
+          resume(msgId, slots, msgId, commands drop index + 1, config, Ledger())
         case _ => Outcome(Inactive)
       }
 
@@ -158,8 +179,8 @@ object Brigade {
    * An active brigade.
    *
    * @param openMsgId The ID of the message that opened this brigade.
-   * @param slots The slots specified for this brigade.
-   * @param ledger The ledger that stores the state of this brigade.
+   * @param slots     The slots specified for this brigade.
+   * @param ledger    The ledger that stores the state of this brigade.
    */
   case class Active(openMsgId: Message.Id, slots: ListMap[Role, Int], ledger: Ledger) extends Brigade {
 
@@ -175,29 +196,11 @@ object Brigade {
         } match {
           case index if index >= 0 =>
             val slots = commands(index).asInstanceOf[Command.Open].slots
-            val (transactions, terminal) = collectTransactions(commands drop index + 1)
-            val (newLedger, replies) = runTransactions(msgId, transactions, ledger)
-            terminal match {
-              case Some(Command.Close) =>
-                Outcome(Inactive, newLedger.buildRoster().buildTeams(slots, config)._1, replies)
-              case Some(Command.Abort) =>
-                Outcome(Inactive, replies = replies)
-              case None =>
-                Outcome(Active(msgId, slots, newLedger), newLedger.buildRoster().buildTeams(slots, config)._1, replies)
-            }
+            resume(openMsgId, slots, msgId, commands drop index + 1, config, ledger)
           case _ => Outcome(Inactive)
         }
       } else {
-        val (transactions, terminal) = collectTransactions(commands)
-        val (newLedger, replies) = runTransactions(msgId, transactions, ledger)
-        terminal match {
-          case Some(Command.Close) =>
-            Outcome(Inactive, newLedger.buildRoster().buildTeams(slots, config)._1, replies)
-          case Some(Command.Abort) =>
-            Outcome(Inactive, replies = replies)
-          case None =>
-            Outcome(Active(openMsgId, slots, newLedger), newLedger.buildRoster().buildTeams(slots, config)._1, replies)
-        }
+        resume(openMsgId, slots, msgId, commands, config, ledger)
       }
 
   }

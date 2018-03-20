@@ -46,7 +46,7 @@ case class Message(id: Message.Id, timestampMs: Long, author: User, tokens: Vect
 
     /* Attempt to read a single role from the input. */
     def readRole(): Option[Role] = input.headOption collect {
-      case Word(role) if role.startsWith("!") && role.length > 1 =>
+      case Word(role) if role.startsWith("!") && role.length > 1 && !Commands(role) =>
         input.next()
         Role(role substring 1)
     }
@@ -95,7 +95,7 @@ case class Message(id: Message.Id, timestampMs: Long, author: User, tokens: Vect
     @annotation.tailrec
     def scan(prefix: Vector[Command]): Vector[Command] = if (!input.hasNext) prefix else input.next() match {
 
-      case Word(tag) if tag.equalsIgnoreCase("!event") =>
+      case Word(tag) if tag.equalsIgnoreCase("!brigade") =>
         scan(prefix :+ Command.Event(readUsers().toSet))
 
       case Word(tag) if tag.equalsIgnoreCase("!open") =>
@@ -136,7 +136,7 @@ case class Message(id: Message.Id, timestampMs: Long, author: User, tokens: Vect
         case roles => roles map (Command.Drop(author, _))
       }))
 
-      case Word(role) if role.startsWith("!") && role.length > 1 =>
+      case Word(role) if role.startsWith("!") && role.length > 1 && !Commands(role) =>
         scan(prefix :+ Command.Volunteer(author, Role(role substring 1)))
 
       case _ =>
@@ -153,6 +153,21 @@ case class Message(id: Message.Id, timestampMs: Long, author: User, tokens: Vect
  * Definitions of the message tokens.
  */
 object Message {
+
+  /** The names of the supported commands. */
+  private val Commands = Set(
+    "!brigade",
+    "!open",
+    "!abort",
+    "!close",
+    "!help",
+    "!?",
+    "!assign",
+    "!release",
+    "!offer",
+    "!kick",
+    "!drop"
+  )
 
   /**
    * Creates a message handled by the system.

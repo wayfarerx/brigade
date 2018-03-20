@@ -44,7 +44,7 @@ case class Ledger(entries: Vector[Ledger.Entry]) {
         filtered :+ (incoming.copy(commands = incoming.commands filterNot (definedSet contains _._1)), incomingIndex)
       } filter (_._1.commands.nonEmpty)
     }.toVector.sortBy(_._2).map(_._1)
-    (Roster() /: instructions.flatMap(_.commands)) { (roster, command) =>
+    val roster = (Roster() /: instructions.flatMap(_.commands)) { (roster, command) =>
       command match {
         case (Command.Assign(user, role), _) =>
           roster.copy(assignments = roster.assignments :+ (user, role))
@@ -58,6 +58,12 @@ case class Ledger(entries: Vector[Ledger.Entry]) {
           roster.copy(volunteers = roster.volunteers filterNot (_._1 == user))
       }
     }
+    val normalizedPreferences = roster.volunteers.groupBy(_._1).mapValues { entries =>
+      entries.sortBy(_._3).map(_._2).zipWithIndex.toMap
+    }
+    roster.copy(volunteers = roster.volunteers map {
+      case (user, role, _) => (user, role, normalizedPreferences(user)(role))
+    })
   }
 
 }

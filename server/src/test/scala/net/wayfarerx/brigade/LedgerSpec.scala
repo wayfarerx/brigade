@@ -52,7 +52,7 @@ class LedgerSpec extends FlatSpec with Matchers {
         sue -> healer
       ),
       Vector(
-        (bob, dps, 1), // FIXME
+        (bob, dps, 0),
         (sue, tank, 0),
         (kim, healer, 0),
         (kim, dps, 1)

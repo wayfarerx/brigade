@@ -38,7 +38,7 @@ case class Roster(
    * @param config The build configuration.
    * @return The collection of teams that were built and the users that were left unassigned.
    */
-  def buildTeams(slots: ListMap[Role, Int], config: Roster.Config): (Vector[Team], Vector[User]) = {
+  def buildTeams(slots: ListMap[Role, Int], config: Roster.Config): Vector[Team] = {
     val _slots = slots filter (_._2 > 0)
     val assigned = collection.mutable.HashSet[User]()
     var assign = Vector[(User, Role)]()
@@ -99,22 +99,24 @@ object Roster {
     slots: ListMap[Role, Int],
     config: Roster.Config,
     previous: Vector[Team]
-  ): (Vector[Team], Vector[User]) = {
+  ): Vector[Team] = {
     val assignedRoles = roster.assignments.groupBy(_._2).mapValues(_.map(_._1))
     val assigned = slots map { case (k, v) => k -> assignedRoles.getOrElse(k, Vector()).take(v) }
-    Roster.Candidate.solve(
+    val team = Roster.Candidate.solve(
       Team(assigned),
       slots map { case (k, v) => k -> (v - assigned(k).length) },
       Candidate.from(roster.volunteers, config)
-    ) match {
-      case Some(team) =>
-        val members = team.members.values.flatten.toSet
-        build(Roster(
-          roster.assignments filterNot (members contains _._1),
-          roster.volunteers filterNot (members contains _._1)
-        ), slots, config, previous :+ team)
-      case None =>
-        previous -> (roster.assignments.map(_._1) ++ roster.volunteers.map(_._1)).distinct
+    )
+    if (team.members.values.map(_.size).sum == slots.values.sum) {
+      val members = team.members.values.flatten.toSet
+      build(Roster(
+        roster.assignments filterNot (members contains _._1),
+        roster.volunteers filterNot (members contains _._1)
+      ), slots, config, previous :+ team)
+    } else if (team.members.values.map(_.size).sum > 0) {
+      previous :+ team
+    } else {
+      previous
     }
   }
 
@@ -159,8 +161,8 @@ object Roster {
      * @return The assembled team.
      */
     @annotation.tailrec
-    private[Roster] def solve(team: Team, openings: Map[Role, Int], candidates: Vector[Candidate]): Option[Team] =
-      if (openings.values.sum == 0) Some(team) else selectRole(openings, candidates) match {
+    private[Roster] def solve(team: Team, openings: Map[Role, Int], candidates: Vector[Candidate]): Team =
+      selectRole(openings, candidates) match {
         case Some(role) =>
           val user = chooseUser(candidates filter (_.role == role))
           solve(
@@ -170,7 +172,7 @@ object Roster {
             }),
             openings + (role -> (openings(role) - 1)),
             candidates filterNot (_.user == user))
-        case None => None
+        case None => team
       }
 
     /**
@@ -183,8 +185,12 @@ object Roster {
     private def selectRole(openings: Map[Role, Int], candidates: Vector[Candidate]): Option[Role] = {
       val filtered = candidates filter (c => openings(c.role) > 0)
       if (filtered.isEmpty) None else {
-        val preference = filtered.map(_.preference).min
-        val withPreference = filtered filter (_.preference == preference)
+        val critical = openings.map(o => (o._1, o._2, filtered count (_.role == o._1))).collect {
+          case (role, requested, available) if available > 0 && available <= requested => role
+        }.toSet
+        val restricted = if (critical.isEmpty) filtered else filtered filter (critical contains _.role)
+        val preference = restricted.map(_.preference).min
+        val withPreference = restricted filter (_.preference == preference)
         val deltas = for {
           (role, requested) <- openings if requested > 0
           available = withPreference.count(_.role == role) if available > 0
