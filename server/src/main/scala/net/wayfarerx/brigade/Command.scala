@@ -36,11 +36,11 @@ object Command {
   case object Help extends Command
 
   /**
-   * Specifies a channel as hosting an event.
+   * Specifies a channel as hosting a brigade.
    *
-   * @param admins The event administrators.
+   * @param organizers The event organizers.
    */
-  case class Event(admins: Set[User]) extends Command
+  case class Brigade(organizers: Set[User]) extends Command
 
   /**
    * A specialization of command that begins, interacts with or ends an event.
@@ -52,7 +52,7 @@ object Command {
    */
   object Lifecycle {
 
-    /** True for all lifecycle commands.*/
+    /** True for all lifecycle commands. */
     def unapply(lifecycle: Lifecycle): Boolean = true
 
   }
@@ -60,9 +60,10 @@ object Command {
   /**
    * Opens a roster with the specified roles and counts.
    *
-   * @param slots The mapping of required roles to the number of users needed per role.
+   * @param slots  The mapping of required roles to the number of users needed per role.
+   * @param config The amount of history to use or None.
    */
-  case class Open(slots: ListMap[Role, Int]) extends Lifecycle
+  case class Open(slots: ListMap[Role, Int], config: Int) extends Lifecycle
 
   /**
    * A specialization of command that references an in-progress event.
@@ -74,7 +75,7 @@ object Command {
    */
   object Transaction {
 
-    /** True for all transaction commands.*/
+    /** True for all transaction commands. */
     def unapply(transaction: Transaction): Boolean = true
 
   }
@@ -96,7 +97,7 @@ object Command {
    */
   object Mutation {
 
-    /** True for all mutation commands.*/
+    /** True for all mutation commands. */
     def unapply(mutation: Mutation): Boolean = true
 
   }

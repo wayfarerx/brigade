@@ -43,6 +43,8 @@ class MessageSpec extends FlatSpec with Matchers {
   val healer = Role("healer")
   val dps = Role("dps")
 
+  /*
+
   it should "handle lifecycle commands" in {
     useMessage(amy, s"!open !tank 1 !healer 2 !dps 9").commands shouldBe
       Vector(Command.Open(ListMap(tank -> 1, healer -> 2, dps -> 9)))
@@ -106,5 +108,7 @@ class MessageSpec extends FlatSpec with Matchers {
       case word => Message.Word(word)
     }.toVector
   )
+
+  */
 
 }

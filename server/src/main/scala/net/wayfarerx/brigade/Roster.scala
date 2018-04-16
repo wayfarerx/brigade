@@ -34,11 +34,11 @@ case class Roster(
   /**
    * Builds teams by first normalizing this roster then recursively building teams.
    *
-   * @param slots  The mapping of roles to the number of users needed in that role.
-   * @param config The build configuration.
+   * @param slots   The mapping of roles to the number of users needed in that role.
+   * @param history The history to use when scoring candidates.
    * @return The collection of teams that were built and the users that were left unassigned.
    */
-  def buildTeams(slots: ListMap[Role, Int], config: Roster.Config): Vector[Team] = {
+  def buildTeams(slots: ListMap[Role, Int], history: History): Vector[Team] = {
     val _slots = slots filter (_._2 > 0)
     val assigned = collection.mutable.HashSet[User]()
     var assign = Vector[(User, Role)]()
@@ -46,7 +46,7 @@ case class Roster(
     Roster.build(
       Roster(assign, volunteers.filter(v => (_slots contains v._2) && !(assigned contains v._1)).distinct),
       _slots,
-      config,
+      history,
       Vector()
     )
   }
@@ -59,37 +59,11 @@ case class Roster(
 object Roster {
 
   /**
-   * Base type for team building configurations.
-   */
-  sealed trait Config
-
-  /**
-   * The team building configuration that ignores any history.
-   */
-  case object Fill extends Config
-
-  /**
-   * The team building configuration searches a history.
-   *
-   * @param history The history to work with.
-   */
-  case class Rotate(history: History) extends Config {
-
-    /** The calculated scores for each team member and role in the selected history. */
-    private[Roster] lazy val scoring = history.teams.reverse.zipWithIndex.flatMap {
-      case (teams, score) => teams.flatMap(_.members.map(_ -> (score + 1)))
-    }.flatMap {
-      case ((role, users), score) => users map (_ -> role -> score)
-    }.groupBy(_._1).mapValues(_.map(t => t._2).sum)
-
-  }
-
-  /**
    * Recursivly builds as many teams as possible from the given roster and configuration.
    *
    * @param roster   The roster to build from.
    * @param slots    The mapping of roles to the number of users needed in that role.
-   * @param config   The configuration to honor.
+   * @param history  The history to use when scoring candidates.
    * @param previous The previously built teams.
    * @return The collection of teams and the unassigned users.
    */
@@ -97,7 +71,7 @@ object Roster {
   private def build(
     roster: Roster,
     slots: ListMap[Role, Int],
-    config: Roster.Config,
+    history: History,
     previous: Vector[Team]
   ): Vector[Team] = {
     val assignedRoles = roster.assignments.groupBy(_._2).mapValues(_.map(_._1))
@@ -105,14 +79,14 @@ object Roster {
     val team = Roster.Candidate.solve(
       Team(assigned),
       slots map { case (k, v) => k -> (v - assigned(k).length) },
-      Candidate.from(roster.volunteers, config)
+      Candidate.from(roster.volunteers, history)
     )
     if (team.members.values.map(_.size).sum == slots.values.sum) {
       val members = team.members.values.flatten.toSet
       build(Roster(
         roster.assignments filterNot (members contains _._1),
         roster.volunteers filterNot (members contains _._1)
-      ), slots, config, previous :+ team)
+      ), slots, history, previous :+ team)
     } else if (team.members.values.map(_.size).sum > 0) {
       previous :+ team
     } else {
@@ -139,16 +113,17 @@ object Roster {
      * Converts a collection of volunteers to a collection of candidates taking the event history into account.
      *
      * @param volunteers The volunteers for the event.
-     * @param config     The configuration for scoring the history of member participation in the event.
+     * @param history    The history to use when scoring candidates.
      * @return A collection of candidates for the event.
      */
-    private[Roster] def from(volunteers: Vector[(User, Role, Int)], config: Config): Vector[Candidate] = {
+    private[Roster] def from(volunteers: Vector[(User, Role, Int)], history: History): Vector[Candidate] = {
+      val scoring = history.teams.reverse.zipWithIndex.flatMap {
+        case (teams, score) => teams.flatMap(_.members.map(_ -> (score + 1)))
+      }.flatMap {
+        case ((role, users), score) => users map (_ -> role -> score)
+      }.groupBy(_._1).mapValues(_.map(t => t._2).sum)
       for ((user, role, preference) <- volunteers) yield {
-        val score = config match {
-          case Fill => 0
-          case scores@Rotate(_) => scores.scoring.getOrElse(user -> role, 0)
-        }
-        Candidate(user, role, score, preference)
+        Candidate(user, role, scoring.getOrElse(user -> role, 0), preference)
       }
     } sortBy (_.score)
 

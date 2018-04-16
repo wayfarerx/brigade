@@ -36,6 +36,8 @@ class LedgerSpec extends FlatSpec with Matchers {
   private val healer = Role("healer")
   private val dps = Role("dps")
 
+  /*
+
   it should "build rosters from simple ledgers" in {
     Ledger(
       Ledger.Entry(Message.Id(1), Command.Assign(bob, tank)),
@@ -99,5 +101,7 @@ class LedgerSpec extends FlatSpec with Matchers {
     )
 
   }
+
+  */
 
 }

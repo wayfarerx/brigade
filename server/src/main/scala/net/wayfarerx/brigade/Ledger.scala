@@ -28,9 +28,10 @@ case class Ledger(entries: Vector[Ledger.Entry]) {
   /**
    * Constructs a roster from this ledger.
    *
+   * @param organizers The users that are authorized to organize the ledger.
    * @return A roster constructed from this ledger.
    */
-  def buildRoster(): Roster = {
+  def buildRoster(organizers: Set[User]): Roster = {
     val instructions = entries.zipWithIndex.groupBy(_._1.msgId).values.flatMap { edits =>
       (Vector[(Entry, Int)]() /: edits) { (state, edit) =>
         val (incoming, incomingIndex) = edit
@@ -44,19 +45,25 @@ case class Ledger(entries: Vector[Ledger.Entry]) {
         filtered :+ (incoming.copy(commands = incoming.commands filterNot (definedSet contains _._1)), incomingIndex)
       } filter (_._1.commands.nonEmpty)
     }.toVector.sortBy(_._2).map(_._1)
-    val roster = (Roster() /: instructions.flatMap(_.commands)) { (roster, command) =>
-      command match {
-        case (Command.Assign(user, role), _) =>
-          roster.copy(assignments = roster.assignments :+ (user, role))
-        case (Command.Release(user), _) =>
-          roster.copy(assignments = roster.assignments filterNot (_._1 == user))
-        case (Command.Volunteer(user, role), p) =>
-          roster.copy(volunteers = roster.volunteers :+ (user, role, p))
-        case (Command.Drop(user, role), _) =>
-          roster.copy(volunteers = roster.volunteers filterNot (v => v._1 == user && v._2 == role))
-        case (Command.DropAll(user), _) =>
-          roster.copy(volunteers = roster.volunteers filterNot (_._1 == user))
-      }
+    val roster = (Roster() /: instructions.flatMap(m => m.commands map (c => (m.author, c._1, c._2)))) {
+      (roster, command) =>
+        command match {
+          case (author, Command.Assign(user, role), _) =>
+            if (!organizers(author)) roster else
+              roster.copy(assignments = roster.assignments :+ (user, role))
+          case (author, Command.Release(user), _) =>
+            if (!organizers(author)) roster else
+              roster.copy(assignments = roster.assignments filterNot (_._1 == user))
+          case (author, Command.Volunteer(user, role), preference) =>
+            if (author != user && !organizers(author)) roster else
+              roster.copy(volunteers = roster.volunteers :+ (user, role, preference))
+          case (author, Command.Drop(user, role), _) =>
+            if (author != user && !organizers(author)) roster else
+              roster.copy(volunteers = roster.volunteers filterNot (v => v._1 == user && v._2 == role))
+          case (author, Command.DropAll(user), _) =>
+            if (author != user && !organizers(author)) roster else
+              roster.copy(volunteers = roster.volunteers filterNot (_._1 == user))
+        }
     }
     val normalizedPreferences = roster.volunteers.groupBy(_._1).mapValues { entries =>
       entries.sortBy(_._3).map(_._2).zipWithIndex.toMap
@@ -86,10 +93,11 @@ object Ledger {
   /**
    * An entry in the ledger corresponding to a message post, edit or delete event.
    *
-   * @param msgId The ID of the message this entry pertains to.
-   * @param commands  The commands that were included in the message and their assigned preference.
+   * @param msgId    The ID of the message this entry pertains to.
+   * @param author   The author of this entry.
+   * @param commands The commands that were included in the message and their assigned preference.
    */
-  case class Entry(msgId: Message.Id, commands: Vector[(Command.Mutation, Int)])
+  case class Entry(msgId: Message.Id, author: User, commands: Vector[(Command.Mutation, Int)])
 
   /**
    * Factory for ledger entries.
@@ -99,14 +107,15 @@ object Ledger {
     /**
      * Creates a new ledger entry.
      *
-     * @param msgId The ID of the message this entry pertains to.
-     * @param commands  The commands that were included in this message and their assigned preference.
+     * @param msgId    The ID of the message this entry pertains to.
+     * @param author   The author of the entry.
+     * @param commands The commands that were included in this message and their assigned preference.
      * @return A new ledger entry.
      */
-    def apply(msgId: Message.Id, commands: Command.Mutation*): Entry = {
+    def apply(msgId: Message.Id, author: User, commands: Command.Mutation*): Entry = {
       var preference = 0
       val volunteers = collection.mutable.HashSet[Command.Volunteer]()
-      Entry(msgId, commands.toVector map {
+      Entry(msgId, author, commands.toVector map {
         case cmd@Command.Volunteer(_, _) if volunteers.add(cmd) =>
           val result = cmd -> preference
           preference += 1

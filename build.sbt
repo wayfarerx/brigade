@@ -20,6 +20,9 @@ lazy val server = (project in file("server")).
 
     libraryDependencies += cats,
     libraryDependencies += akka,
+    libraryDependencies += circe,
+    libraryDependencies += circeGeneric,
+    libraryDependencies += circeParser,
     libraryDependencies += discord4j,
     libraryDependencies += json4sNative,
     libraryDependencies += awsS3,
@@ -28,7 +31,7 @@ lazy val server = (project in file("server")).
     libraryDependencies += akkaTest,
     libraryDependencies += scalaTest,
 
-    mainClass in assembly := Some("net.wayfarerx.brigade.main.BrigadeMain"),
+    mainClass in assembly := Some("net.wayfarerx.brigade.main.Program"),
     assemblyJarName in assembly := "brigade.jar"
 
   )

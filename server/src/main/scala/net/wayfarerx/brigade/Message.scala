@@ -23,12 +23,17 @@ import collection.immutable.ListMap
 /**
  * Describes a message handled by the system.
  *
- * @param id          The ID of this message.
- * @param timestampMs The instant that this message was last updated.
- * @param author      The author of this message.
- * @param tokens      The tokens contained in this message.
+ * @param channel The channel this message was sent to.
+ * @param id      The ID of this message.
+ * @param author  The author of this message.
+ * @param tokens  The tokens contained in this message.
  */
-case class Message(id: Message.Id, timestampMs: Long, author: User, tokens: Vector[Message.Token]) {
+case class Message(
+  channel: Channel,
+  id: Message.Id,
+  author: User,
+  tokens: Vector[Message.Token]
+) {
 
   import Message._
 
@@ -49,6 +54,13 @@ case class Message(id: Message.Id, timestampMs: Long, author: User, tokens: Vect
       case Word(role) if role.startsWith("!") && role.length > 1 && !Commands(role) =>
         input.next()
         Role(role substring 1)
+    }
+
+    /* Attempt to read a single role from the input. */
+    def readCommand(): Option[String] = input.headOption collect {
+      case Word(role) if role.startsWith("!") && Commands(role.toLowerCase) =>
+        input.next()
+        role substring 1
     }
 
     /* Attempt to read a single number from the input. */
@@ -78,9 +90,20 @@ case class Message(id: Message.Id, timestampMs: Long, author: User, tokens: Vect
 
     /* Attempt to read as many consecutive slots as possible from the input. */
     @annotation.tailrec
-    def readSlots(prefix: ListMap[Role, Int] = ListMap()): ListMap[Role, Int] = readRole() match {
-      case Some(role) => readSlots(prefix + (role -> (readNumber() map (Math.max(0, _)) getOrElse 1)))
-      case None => prefix
+    def readSlotsAndHistory(
+      prefix: (ListMap[Role, Int], Int) = (ListMap(), 1)
+    ): (ListMap[Role, Int], Int) = {
+      val (slots, history) = prefix
+      readRole() match {
+        case Some(role) =>
+          readSlotsAndHistory(slots + (role -> (readNumber() map (Math.max(0, _)) getOrElse 1)) -> history)
+        case None => readCommand() match {
+          case Some("history") =>
+            readSlotsAndHistory(slots -> (readNumber() map (Math.max(0, _)) getOrElse 1))
+          case _ =>
+            prefix
+        }
+      }
     }
 
     /* Attempt to read as many consecutive slots as possible from the input. */
@@ -96,11 +119,11 @@ case class Message(id: Message.Id, timestampMs: Long, author: User, tokens: Vect
     def scan(prefix: Vector[Command]): Vector[Command] = if (!input.hasNext) prefix else input.next() match {
 
       case Word(tag) if tag.equalsIgnoreCase("!brigade") =>
-        scan(prefix :+ Command.Event(readUsers().toSet))
+        scan(prefix :+ Command.Brigade(readUsers().toSet))
 
       case Word(tag) if tag.equalsIgnoreCase("!open") =>
-        val slots = readSlots()
-        scan(if (slots.isEmpty) prefix else prefix :+ Command.Open(slots))
+        val (slots, history) = readSlotsAndHistory()
+        scan(if (slots.isEmpty) prefix else prefix :+ Command.Open(slots, history))
 
       case Word(tag) if tag.equalsIgnoreCase("!abort") =>
         scan(prefix :+ Command.Abort)
@@ -158,6 +181,7 @@ object Message {
   private val Commands = Set(
     "!brigade",
     "!open",
+    "!history",
     "!abort",
     "!close",
     "!help",
@@ -172,13 +196,13 @@ object Message {
   /**
    * Creates a message handled by the system.
    *
-   * @param id          The ID of the message.
-   * @param timestampMs The instant that the message was last updated.
-   * @param author      The author of the message.
-   * @param tokens      The tokens contained in the message.
+   * @param channel The channel this message was sent to.
+   * @param id      The ID of the message.
+   * @param author  The author of the message.
+   * @param tokens  The tokens contained in the message.
    */
-  def apply(id: Message.Id, timestampMs: Long, author: User, tokens: Message.Token*): Message =
-    Message(id, timestampMs, author, tokens.toVector)
+  def apply(channel: Channel, id: Message.Id, author: User, tokens: Message.Token*): Message =
+    Message(channel, id, author, tokens.toVector)
 
   /**
    * The ID of a message.

@@ -48,6 +48,8 @@ class RosterSpec extends FlatSpec with Matchers {
   val sue = User(13)
   val zoe = User(14)
 
+  /*
+
   it should "build partial teams" in {
     val roster = Roster(
       Vector(amy -> tank),
@@ -190,5 +192,7 @@ class RosterSpec extends FlatSpec with Matchers {
       dps -> Vector(bob, sue)
     )))
   }
+
+  */
 
 }

@@ -45,8 +45,10 @@ class BrigadeSpec extends FlatSpec with Matchers {
 
   def msg(tokens: Vector[Message.Token]*): Vector[Message.Token] = (Vector[Message.Token]() /: tokens) (_ ++ _)
 
+  /*
+
   it should "ignore events when inactive" in {
-    val brigade = ((Brigade.Inactive: Brigade) /: Vector(
+    val brigade = ((Director.OldInactive: Director) /: Vector(
       Message(Message.Id(1), 1, bob, msg("!assign", bob, "!tank")),
       Message(Message.Id(2), 2, sue, msg("!assign", sue, "!healer")),
       Message(Message.Id(3), 3, bob, msg("!healer !dps")),
@@ -57,12 +59,12 @@ class BrigadeSpec extends FlatSpec with Matchers {
       Message(Message.Id(8), 8, bob, msg("!drop !healer")),
       Message(Message.Id(9), 9, jim, msg("!kick", jim))
     )) ((previous, message) => previous(message).brigade)
-    brigade shouldBe Brigade.Inactive
+    brigade shouldBe Director.OldInactive
 
   }
 
   it should "build ledgers and teams from message streams" in {
-    val brigade = ((Brigade.Inactive: Brigade) /: Vector(
+    val brigade = ((Director.OldInactive: Director) /: Vector(
       Message(Message.Id(0), 0, bob, msg("!open !tank 1 !healer 1 !dps 2")),
       Message(Message.Id(1), 1, bob, msg("!assign", bob, "!tank")),
       Message(Message.Id(2), 2, sue, msg("!assign", sue, "!healer")),
@@ -74,7 +76,7 @@ class BrigadeSpec extends FlatSpec with Matchers {
       Message(Message.Id(8), 8, bob, msg("!drop !healer")),
       Message(Message.Id(9), 9, jim, msg("!kick", jim, " I want to !tank"))
     )) ((previous, message) => previous(message).brigade)
-    brigade shouldBe Brigade.Active(
+    brigade shouldBe Director.OldActive(
       Message.Id(0),
       ListMap(tank -> 1, healer -> 1, dps -> 2),
       Ledger(
@@ -88,8 +90,8 @@ class BrigadeSpec extends FlatSpec with Matchers {
         Ledger.Entry(Message.Id(8), Command.Drop(bob, healer)),
         Ledger.Entry(Message.Id(9), Command.DropAll(jim), Command.Volunteer(jim, tank))
       ))
-    val Brigade.Outcome(b, t, r) = brigade(Message(Message.Id(10), 10, jim, msg("!close")))
-    b shouldBe Brigade.Inactive
+    val Director.OldOutcome(b, t, r) = brigade(Message(Message.Id(10), 10, jim, msg("!close")))
+    b shouldBe Director.OldInactive
     t shouldBe Vector(Team(ListMap(
       tank -> Vector(jim),
       healer -> Vector(sue),
@@ -99,7 +101,7 @@ class BrigadeSpec extends FlatSpec with Matchers {
   }
 
   it should "build ledgers and teams from message streams with edits" in {
-    val brigade = ((Brigade.Inactive: Brigade) /: Vector(
+    val brigade = ((Director.OldInactive: Director) /: Vector(
       Message(Message.Id(0), 0, bob, msg("!open !tank 1 !healer 1 !dps 2")),
       Message(Message.Id(1), 1, bob, msg("!assign", bob, "!tank")),
       Message(Message.Id(2), 2, sue, msg("!assign", sue, "!healer")),
@@ -110,7 +112,7 @@ class BrigadeSpec extends FlatSpec with Matchers {
       Message(Message.Id(1), 7, bob, msg("!assign", bob, "!dps")),
       Message(Message.Id(3), 8, bob, msg("!tank !dps"))
     )) ((previous, message) => previous(message).brigade)
-    brigade shouldBe Brigade.Active(
+    brigade shouldBe Director.OldActive(
       Message.Id(0),
       ListMap(tank -> 1, healer -> 1, dps -> 2),
       Ledger(
@@ -123,8 +125,8 @@ class BrigadeSpec extends FlatSpec with Matchers {
         Ledger.Entry(Message.Id(1), Command.Assign(bob, dps)),
         Ledger.Entry(Message.Id(3), Command.Volunteer(bob, tank), Command.Volunteer(bob, dps))
       ))
-    val Brigade.Outcome(b, t, r) = brigade(Message(Message.Id(10), 10, jim, msg("!close")))
-    b shouldBe Brigade.Inactive
+    val Director.OldOutcome(b, t, r) = brigade(Message(Message.Id(10), 10, jim, msg("!close")))
+    b shouldBe Director.OldInactive
     t shouldBe Vector(Team(ListMap(
       tank -> Vector(jim),
       healer -> Vector(sue),
@@ -134,7 +136,7 @@ class BrigadeSpec extends FlatSpec with Matchers {
   }
 
   it should "build ledgers and teams after editing the open message" in {
-    val brigade = ((Brigade.Inactive: Brigade) /: Vector(
+    val brigade = ((Director.OldInactive: Director) /: Vector(
       Message(Message.Id(0), 0, bob, msg("!open !tank 1 !healer 1 !dps 1")),
       Message(Message.Id(1), 1, bob, msg("!assign", bob, "!tank")),
       Message(Message.Id(2), 2, sue, msg("!assign", sue, "!healer")),
@@ -146,8 +148,8 @@ class BrigadeSpec extends FlatSpec with Matchers {
       Message(Message.Id(3), 8, bob, msg("!tank !dps")),
       Message(Message.Id(0), 9, bob, msg("!open !tank 1 !healer 1 !dps 2"))
     )) ((previous, message) => previous(message).brigade)
-    val Brigade.Outcome(b, t, r) = brigade(Message(Message.Id(10), 10, jim, msg("!close")))
-    b shouldBe Brigade.Inactive
+    val Director.OldOutcome(b, t, r) = brigade(Message(Message.Id(10), 10, jim, msg("!close")))
+    b shouldBe Director.OldInactive
     t shouldBe Vector(Team(ListMap(
       tank -> Vector(jim),
       healer -> Vector(sue),
@@ -157,7 +159,7 @@ class BrigadeSpec extends FlatSpec with Matchers {
   }
 
   it should "reply to queries" in {
-    val Brigade.Outcome(b, t, r) = Brigade.Inactive(
+    val Director.OldOutcome(b, t, r) = Director.OldInactive(
       Message(
         Message.Id(0),
         0,
@@ -174,7 +176,7 @@ class BrigadeSpec extends FlatSpec with Matchers {
         )
       )
     )
-    b shouldBe Brigade.Inactive
+    b shouldBe Director.OldInactive
     t shouldBe Vector(Team(ListMap(
       tank -> Vector(bob),
       healer -> Vector(sue),
@@ -185,5 +187,7 @@ class BrigadeSpec extends FlatSpec with Matchers {
       Reply(kim, Vector(), Vector(healer, dps))
     )
   }
+
+  */
 
 }

@@ -1,7 +1,7 @@
 /*
- * History.scala
+ * Tracker.scala
  *
- * Copyright 2017 wayfarerx <x@wayfarerx.net> (@thewayfarerx)
+ * Copyright 2018 wayfarerx <x@wayfarerx.net> (@thewayfarerx)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,16 @@
  */
 
 package net.wayfarerx.brigade
+package main
 
-/**
- * The history of teams that were created for an event.
- *
- * @param teams The sets of teams that were created for an event, most-recent first.
- */
-case class History (teams: Vector[Vector[Team]] = Vector())
+import sx.blah.discord.handle.obj.IChannel
+
+final class Tracker(channel: IChannel) {
+
+}
+
+object Tracker {
+
+
+
+}
