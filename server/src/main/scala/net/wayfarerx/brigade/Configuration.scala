@@ -1,5 +1,5 @@
 /*
- * Guild.scala
+ * Configuration.scala
  *
  * Copyright 2018 wayfarerx <x@wayfarerx.net> (@thewayfarerx)
  *
@@ -19,38 +19,25 @@
 package net.wayfarerx.brigade
 
 /**
- * Definition of a guild.
- *
- * @param id    The ID of this guild.
- * @param owner The owner of this guild.
+ * Base type for brigade configurations.
  */
-case class Guild(id: Guild.Id, owner: User)
+sealed trait Configuration
 
 /**
- * Defines the guild ID.
+ * Definitions of the supported configurations.
  */
-object Guild {
+object Configuration {
 
   /**
-   * The ID of a guild.
+   * The default configuration that ignores history.
+   */
+  case object Default extends Configuration
+
+  /**
+   * The configuration that attempts to cycle users through various roles.
    *
-   * @param value The underlying guild ID value.
+   * @param history The history to use when deciding what users to place in what roles.
    */
-  final class Id private(val value: Long) extends AnyVal
-
-  /**
-   * Factory for guild IDs.
-   */
-  object Id {
-
-    /**
-     * Creates a new guild ID.
-     *
-     * @param value The underlying guild ID value.
-     * @return A new guild ID.
-     */
-    def apply(value: Long): Id = new Id(value)
-
-  }
+  case class Cycle(history: History) extends Configuration
 
 }

@@ -18,17 +18,25 @@
 
 package net.wayfarerx.brigade
 
-/**
- * Definition of a channel.
- *
- * @param id             The ID of this channel.
- * @param organizers The administrators of this channel.
- * @param guild          The guild this channel belongs to.
- */
-case class Channel(id: Channel.Id, organizers: Set[User], guild: Guild)
+import collection.immutable.{ListMap, SortedSet}
+import concurrent.duration._
+import akka.actor.typed.ActorRef
+import akka.actor.typed.scaladsl._
 
 /**
- * Defines the channel ID.
+ * An actor that manages the brigade for a channel.
+ *
+ * @param id         The ID of this channel.
+ * @param owner      The owner of this channel.
+ * @param outgoing   The connection to the outside world.
+ */
+final class Channel(id: Channel.Id, owner: User, outgoing: ActorRef[Event.Outgoing]) {
+
+
+}
+
+/**
+ * Definitions associated with channels.
  */
 object Channel {
 
@@ -37,7 +45,12 @@ object Channel {
    *
    * @param value The underlying channel ID value.
    */
-  final class Id private(val value: Long) extends AnyVal
+  final class Id private(val value: Long) extends AnyVal {
+
+    /* Convert to a string. */
+    override def toString: String = s"Channel.Id($value)"
+
+  }
 
   /**
    * Factory for channel IDs.
@@ -48,7 +61,7 @@ object Channel {
      * Creates a new channel ID.
      *
      * @param value The underlying channel ID value.
-     * @return A new channel ID.
+     * @return a new channel ID.
      */
     def apply(value: Long): Id = new Id(value)
 

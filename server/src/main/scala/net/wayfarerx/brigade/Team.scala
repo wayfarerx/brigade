@@ -25,4 +25,32 @@ import scala.collection.immutable.ListMap
  *
  * @param members The collection of users assigned to each role.
  */
-case class Team(members: ListMap[Role, Vector[User]] = ListMap())
+final class Team private (val members: ListMap[Role, Vector[User]]) extends AnyVal {
+
+  /* Return this role as a string. */
+  override def toString: String = s"Team($members)"
+
+}
+
+/**
+ * Factory for teams.
+ */
+object Team {
+
+  /**
+   * Creates a new team.
+   *
+   * @param members The collection of users assigned to each role.
+   * @return A new team.
+   */
+  def apply(members: ListMap[Role, Vector[User]] = ListMap()): Team = new Team(members)
+
+  /**
+   * Extracts the members of the specified team.
+   *
+   * @param team The team to extract from.
+   * @return The members of the specified team.
+   */
+  def unapply(team: Team): Option[ListMap[Role, Vector[User]]] = Some(team.members)
+
+}

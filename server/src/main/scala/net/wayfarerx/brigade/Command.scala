@@ -21,74 +21,65 @@ package net.wayfarerx.brigade
 import scala.collection.immutable.ListMap
 
 /**
- * Base type for commands extracted from messages.
+ * Base type for commands that can be submitted to a brigade.
  */
-sealed trait Command
+trait Command
 
 /**
- * Implementations of the supported commands.
+ * Definitions of the supported command types.
  */
 object Command {
 
   /**
-   * Requests the help message.
+   * Extracts the data from a command.
+   *
+   * @param cmd The command to extract.
+   * @return True for all commands.
+   */
+  def unapply(cmd: Command): Boolean = true
+
+  /**
+   * A command that represents a user asking for help.
    */
   case object Help extends Command
 
   /**
-   * Specifies a channel as hosting a brigade.
+   * A command that represents the opening of a roster for a brigade.
    *
-   * @param organizers The event organizers.
+   * @param slots      The slots available in a team.
+   * @param teamsMsgId The ID of the message used to display teams if it is available.
    */
-  case class Brigade(organizers: Set[User]) extends Command
+  case class Open(slots: ListMap[Role, Int], teamsMsgId: Option[Message.Id]) extends Command
 
   /**
-   * A specialization of command that begins, interacts with or ends an event.
+   * A specialization of command that references an in-progress roster.
    */
-  sealed trait Lifecycle extends Command
-
-  /**
-   * Extractor for lifecycle commands.
-   */
-  object Lifecycle {
-
-    /** True for all lifecycle commands. */
-    def unapply(lifecycle: Lifecycle): Boolean = true
-
-  }
-
-  /**
-   * Opens a roster with the specified roles and counts.
-   *
-   * @param slots  The mapping of required roles to the number of users needed per role.
-   * @param config The amount of history to use or None.
-   */
-  case class Open(slots: ListMap[Role, Int], config: Int) extends Lifecycle
-
-  /**
-   * A specialization of command that references an in-progress event.
-   */
-  sealed trait Transaction extends Lifecycle
+  sealed trait Transaction extends Command
 
   /**
    * Extractor for transaction commands.
    */
   object Transaction {
 
-    /** True for all transaction commands. */
-    def unapply(transaction: Transaction): Boolean = true
+    /**
+     * Extracts the data from a transaction command.
+     *
+     * @param cmd The command to extract.
+     * @return True for all transaction commands.
+     */
+    def unapply(cmd: Transaction): Boolean = true
 
   }
 
   /**
-   * Queries the roles a user has volunteered for in the in-progress roster.
+   * Queries the roles a user is assigned to or has volunteered for in the in-progress roster.
    *
-   * @param user The user to query the volunteered roles for.
+   * @param user The user to query the roles for.
    */
   case class Query(user: User) extends Transaction
 
   /**
-   * A specialization of transaction that changes an in-progress event.
+   * A specialization of transaction that changes an in-progress roster.
    */
   sealed trait Mutation extends Transaction
 
@@ -97,8 +88,13 @@ object Command {
    */
   object Mutation {
 
-    /** True for all mutation commands. */
-    def unapply(mutation: Mutation): Boolean = true
+    /**
+     * Extracts the data from a mutation command.
+     *
+     * @param cmd The command to extract.
+     * @return True for all mutation commands.
+     */
+    def unapply(cmd: Mutation): Boolean = true
 
   }
 
@@ -141,17 +137,22 @@ object Command {
   case class DropAll(user: User) extends Mutation
 
   /**
-   * A specialization of command that terminates an in-progress event.
+   * A specialization of command that terminates an in-progress roster.
    */
-  sealed trait Terminal extends Lifecycle
+  sealed trait Terminal extends Command
 
   /**
    * Extractor for terminal commands.
    */
   object Terminal {
 
-    /** True for all terminal commands. */
-    def unapply(terminal: Terminal): Boolean = true
+    /**
+     * Extracts the data from a terminal command.
+     *
+     * @param cmd The command to extract.
+     * @return True for all terminal commands.
+     */
+    def unapply(cmd: Terminal): Boolean = true
 
   }
 
@@ -161,7 +162,7 @@ object Command {
   case object Abort extends Terminal
 
   /**
-   * Completes the in-progress roster and creates a team.
+   * Completes the in-progress roster and creates one or more teams.
    */
   case object Close extends Terminal
 

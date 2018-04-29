@@ -19,11 +19,19 @@
 package net.wayfarerx.brigade
 
 /**
- * A recording of the events that occur during the sign-up phase of an event.
+ * A recording of the mutations that occur during the sign-up phase of building a brigade.
  */
 case class Ledger(entries: Vector[Ledger.Entry]) {
 
   import Ledger._
+
+  /**
+   * Appends an entry to this ledger.
+   *
+   * @param entry The ledger to append to.
+   * @return The new ledger.
+   */
+  def :+ (entry: Entry): Ledger = copy(entries :+ entry)
 
   /**
    * Constructs a roster from this ledger.
@@ -35,17 +43,17 @@ case class Ledger(entries: Vector[Ledger.Entry]) {
     val instructions = entries.zipWithIndex.groupBy(_._1.msgId).values.flatMap { edits =>
       (Vector[(Entry, Int)]() /: edits) { (state, edit) =>
         val (incoming, incomingIndex) = edit
-        val incomingCommands = incoming.commands.toMap
+        val incomingCommands = incoming.mutations.toMap
         val filtered = state map {
-          case (entry, index) => entry.copy(commands = entry.commands flatMap {
+          case (entry, index) => entry.copy(mutations = entry.mutations flatMap {
             case (cmd, _) => incomingCommands get cmd map (cmd -> _)
           }) -> index
         }
-        val definedSet = filtered.flatMap(_._1.commands.map(_._1)).toSet
-        filtered :+ (incoming.copy(commands = incoming.commands filterNot (definedSet contains _._1)), incomingIndex)
-      } filter (_._1.commands.nonEmpty)
+        val definedSet = filtered.flatMap(_._1.mutations.map(_._1)).toSet
+        filtered :+ (incoming.copy(mutations = incoming.mutations filterNot (definedSet contains _._1)), incomingIndex)
+      } filter (_._1.mutations.nonEmpty)
     }.toVector.sortBy(_._2).map(_._1)
-    val roster = (Roster() /: instructions.flatMap(m => m.commands map (c => (m.author, c._1, c._2)))) {
+    val roster = (Roster() /: instructions.flatMap(m => m.mutations map (c => (m.author, c._1, c._2)))) {
       (roster, command) =>
         command match {
           case (author, Command.Assign(user, role), _) =>
@@ -93,11 +101,11 @@ object Ledger {
   /**
    * An entry in the ledger corresponding to a message post, edit or delete event.
    *
-   * @param msgId    The ID of the message this entry pertains to.
-   * @param author   The author of this entry.
-   * @param commands The commands that were included in the message and their assigned preference.
+   * @param msgId     The ID of the message this entry pertains to.
+   * @param author    The author of this entry.
+   * @param mutations The events that were included in the message and their assigned preference.
    */
-  case class Entry(msgId: Message.Id, author: User, commands: Vector[(Command.Mutation, Int)])
+  case class Entry(msgId: Message.Id, author: User, mutations: Vector[(Command.Mutation, Int)])
 
   /**
    * Factory for ledger entries.
@@ -107,15 +115,15 @@ object Ledger {
     /**
      * Creates a new ledger entry.
      *
-     * @param msgId    The ID of the message this entry pertains to.
-     * @param author   The author of the entry.
-     * @param commands The commands that were included in this message and their assigned preference.
+     * @param msgId     The ID of the message this entry pertains to.
+     * @param author    The author of the entry.
+     * @param mutations The events that were included in this message and their assigned preference.
      * @return A new ledger entry.
      */
-    def apply(msgId: Message.Id, author: User, commands: Command.Mutation*): Entry = {
+    def apply(msgId: Message.Id, author: User, mutations: Command.Mutation*): Entry = {
       var preference = 0
       val volunteers = collection.mutable.HashSet[Command.Volunteer]()
-      Entry(msgId, author, commands.toVector map {
+      Entry(msgId, author, mutations.toVector map {
         case cmd@Command.Volunteer(_, _) if volunteers.add(cmd) =>
           val result = cmd -> preference
           preference += 1

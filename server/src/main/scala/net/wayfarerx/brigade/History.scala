@@ -19,8 +19,36 @@
 package net.wayfarerx.brigade
 
 /**
- * The history of teams that were created for an event.
+ * A view of the history of teams that were created for an event.
  *
  * @param teams The sets of teams that were created for an event, most-recent first.
  */
-case class History (teams: Vector[Vector[Team]] = Vector())
+final class History private (val teams: Vector[Vector[Team]]) extends AnyVal {
+
+  /* Return this role as a string. */
+  override def toString: String = s"History($teams)"
+
+}
+
+/**
+ * Factory for team histories.
+ */
+object History {
+
+  /**
+   * Creates a new team history.
+   *
+   * @param teams The sets of teams in the history.
+   * @return A new team history.
+   */
+  def apply(teams: Vector[Vector[Team]] = Vector()): History = new History(teams)
+
+  /**
+   * Extracts the sets of teams from the specified history.
+   *
+   * @param history The history to extract from.
+   * @return The sets of teams in the specified history.
+   */
+  def unapply(history: History): Option[Vector[Vector[Team]]] = Some(history.teams)
+
+}

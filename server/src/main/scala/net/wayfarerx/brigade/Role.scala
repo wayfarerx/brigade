@@ -23,17 +23,7 @@ package net.wayfarerx.brigade
  *
  * @param id The ID of the role in question.
  */
-final class Role private(val id: String) {
-
-  /* Check for equality. */
-  override def equals(that: Any): Boolean = that match {
-    case Role(thatId) if id.equalsIgnoreCase(thatId) => true
-    case _ => false
-  }
-
-  /* Generate a hash code. */
-  override def hashCode(): Int =
-    Role.hashCode ^ id.toLowerCase.hashCode
+final class Role private(val id: String) extends AnyVal {
 
   /* Return this role as a string. */
   override def toString: String = s"Role($id)"

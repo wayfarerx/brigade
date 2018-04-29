@@ -97,7 +97,7 @@ object Manager {
     def lastModifiedMs: Long
 
     /** The state of the channel's brigade. */
-    def brigade: Director
+    def brigade: Channel
 
   }
 
@@ -120,7 +120,7 @@ object Manager {
    * @param lastModifiedMs The last time the channel was modified.
    * @param brigade        The state of the channel's brigade.
    */
-  case class Active(lastModifiedMs: Long, brigade: Director) extends State {
+  case class Active(lastModifiedMs: Long, brigade: Channel) extends State {
 
   }
 

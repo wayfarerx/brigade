@@ -23,152 +23,31 @@ import collection.immutable.ListMap
 /**
  * Describes a message handled by the system.
  *
- * @param channel The channel this message was sent to.
- * @param id      The ID of this message.
- * @param author  The author of this message.
- * @param tokens  The tokens contained in this message.
+ * @param id     The ID of this message.
+ * @param author The author of this message.
+ * @param tokens The tokens contained in this message.
  */
 case class Message(
-  channel: Channel,
   id: Message.Id,
   author: User,
   tokens: Vector[Message.Token]
 ) {
 
-  import Message._
+  /**
+   * Attempts to extract configuration information from this message.
+   *
+   * @return Any organizers and history depth that were extracted from this message.
+   */
+  def extractConfiguration: (Set[User], Option[Int]) =
+    Message.Parser.parseConfiguration(author, tokens)
 
-  /** This message parsed into a sequence of commands. */
-  lazy val commands: Vector[Command] = {
-
-    val input = tokens.iterator.buffered
-
-    /* Attempt to read a single user from the input. */
-    def readUser(): Option[User] = input.headOption collect {
-      case Mention(user) =>
-        input.next()
-        user
-    }
-
-    /* Attempt to read a single role from the input. */
-    def readRole(): Option[Role] = input.headOption collect {
-      case Word(role) if role.startsWith("!") && role.length > 1 && !Commands(role) =>
-        input.next()
-        Role(role substring 1)
-    }
-
-    /* Attempt to read a single role from the input. */
-    def readCommand(): Option[String] = input.headOption collect {
-      case Word(role) if role.startsWith("!") && Commands(role.toLowerCase) =>
-        input.next()
-        role substring 1
-    }
-
-    /* Attempt to read a single number from the input. */
-    def readNumber(): Option[Int] = input.headOption flatMap {
-      case Word(number) => try Some(number.toInt) catch {
-        case _: NumberFormatException => None
-      }
-      case _ => None
-    } map { number =>
-      input.next()
-      number
-    }
-
-    /* Attempt to read as many consecutive users as possible from the input. */
-    @annotation.tailrec
-    def readUsers(prefix: Vector[User] = Vector()): Vector[User] = readUser() match {
-      case Some(user) => readUsers(prefix :+ user)
-      case _ => prefix
-    }
-
-    /* Attempt to read as many consecutive roles as possible from the input. */
-    @annotation.tailrec
-    def readRoles(prefix: Vector[Role] = Vector()): Vector[Role] = readRole() match {
-      case Some(role) => readRoles(prefix :+ role)
-      case _ => prefix
-    }
-
-    /* Attempt to read as many consecutive slots as possible from the input. */
-    @annotation.tailrec
-    def readSlotsAndHistory(
-      prefix: (ListMap[Role, Int], Int) = (ListMap(), 1)
-    ): (ListMap[Role, Int], Int) = {
-      val (slots, history) = prefix
-      readRole() match {
-        case Some(role) =>
-          readSlotsAndHistory(slots + (role -> (readNumber() map (Math.max(0, _)) getOrElse 1)) -> history)
-        case None => readCommand() match {
-          case Some("history") =>
-            readSlotsAndHistory(slots -> (readNumber() map (Math.max(0, _)) getOrElse 1))
-          case _ =>
-            prefix
-        }
-      }
-    }
-
-    /* Attempt to read as many consecutive slots as possible from the input. */
-    @annotation.tailrec
-    def readAssignments(prefix: Vector[(User, Role)] = Vector()): Vector[(User, Role)] =
-      readUser() flatMap (u => readRole() map (u -> _)) match {
-        case Some(assignment) => readAssignments(prefix :+ assignment)
-        case None => prefix
-      }
-
-    /* Scan the entirety of this message and extracts all commands. */
-    @annotation.tailrec
-    def scan(prefix: Vector[Command]): Vector[Command] = if (!input.hasNext) prefix else input.next() match {
-
-      case Word(tag) if tag.equalsIgnoreCase("!brigade") =>
-        scan(prefix :+ Command.Brigade(readUsers().toSet))
-
-      case Word(tag) if tag.equalsIgnoreCase("!open") =>
-        val (slots, history) = readSlotsAndHistory()
-        scan(if (slots.isEmpty) prefix else prefix :+ Command.Open(slots, history))
-
-      case Word(tag) if tag.equalsIgnoreCase("!abort") =>
-        scan(prefix :+ Command.Abort)
-
-      case Word(tag) if tag.equalsIgnoreCase("!close") =>
-        scan(prefix :+ Command.Close)
-
-      case Word(tag) if tag.equalsIgnoreCase("!help") =>
-        scan(prefix :+ Command.Help)
-
-      case Word(tag) if tag.equalsIgnoreCase("!?") =>
-        scan(prefix :+ Command.Query(readUser() getOrElse author))
-
-      case Word(tag) if tag.equalsIgnoreCase("!assign") =>
-        scan(prefix ++ readAssignments().map(Command.Assign.tupled))
-
-      case Word(tag) if tag.equalsIgnoreCase("!release") =>
-        scan(prefix ++ readUsers().map(Command.Release))
-
-      case Word(tag) if tag.equalsIgnoreCase("!offer") =>
-        scan(prefix ++ readUser().toVector.flatMap(u => readRoles() map (Command.Volunteer(u, _))))
-
-      case Word(tag) if tag.equalsIgnoreCase("!kick") =>
-        scan(prefix ++ readUser().toVector.flatMap { user =>
-          readRoles() match {
-            case roles if roles.isEmpty => Vector(Command.DropAll(user))
-            case roles => roles map (Command.Drop(user, _))
-          }
-        })
-
-      case Word(tag) if tag.equalsIgnoreCase("!drop") => scan(prefix ++ (readRoles() match {
-        case roles if roles.isEmpty => Vector(Command.DropAll(author))
-        case roles => roles map (Command.Drop(author, _))
-      }))
-
-      case Word(role) if role.startsWith("!") && role.length > 1 && !Commands(role) =>
-        scan(prefix :+ Command.Volunteer(author, Role(role substring 1)))
-
-      case _ =>
-        scan(prefix)
-
-    }
-
-    scan(Vector())
-  }
+  /**
+   * Attempts to extract submission information from this message.
+   *
+   * @return Any events that were extracted from this message.
+   */
+  def extractSubmission: Vector[Command] =
+    Message.Parser.parseSubmission(author, tokens)
 
 }
 
@@ -180,29 +59,28 @@ object Message {
   /** The names of the supported commands. */
   private val Commands = Set(
     "!brigade",
+    "!cycle",
     "!open",
-    "!history",
     "!abort",
     "!close",
-    "!help",
     "!?",
     "!assign",
     "!release",
     "!offer",
     "!kick",
-    "!drop"
+    "!drop",
+    "!help"
   )
 
   /**
    * Creates a message handled by the system.
    *
-   * @param channel The channel this message was sent to.
-   * @param id      The ID of the message.
-   * @param author  The author of the message.
-   * @param tokens  The tokens contained in the message.
+   * @param id     The ID of the message.
+   * @param author The author of the message.
+   * @param tokens The tokens contained in the message.
    */
-  def apply(channel: Channel, id: Message.Id, author: User, tokens: Message.Token*): Message =
-    Message(channel, id, author, tokens.toVector)
+  def apply(id: Message.Id, author: User, tokens: Message.Token*): Message =
+    Message(id, author, tokens.toVector)
 
   /**
    * The ID of a message.
@@ -249,5 +127,241 @@ object Message {
    * @param value The value of this word.
    */
   case class Word(value: String) extends Token
+
+  /**
+   * Definition of the message parsing routines.
+   */
+  private object Parser {
+
+    /**
+     * Parses the components of a configuration from a sequence of tokens.
+     *
+     * @param author The author of the tokens.
+     * @param input The tokens to parse.
+     * @param prefix The components that have already been parsed.
+     * @return The components of the configuration.
+     */
+    @annotation.tailrec
+    def parseConfiguration(
+      author: User,
+      input: Vector[Token],
+      prefix: (Set[User], Option[Int]) = (Set(), None)
+    ): (Set[User], Option[Int]) = input.headOption match {
+
+      case Some(Word(cmd)) if cmd.equalsIgnoreCase("!brigade") =>
+        val (users, output) = readUsers(input.tail)
+        parseConfiguration(author, output, prefix._1 + author ++ users -> prefix._2)
+
+      case Some(Word(cmd)) if cmd.equalsIgnoreCase("!cycle") =>
+        readNumber(input.tail) match {
+          case Some((number, output)) => parseConfiguration(author, output, prefix._1 -> Some(number))
+          case None => parseConfiguration(author, input.tail, prefix._1 -> Some(2))
+        }
+
+      case Some(_) =>
+        parseConfiguration(author, input.tail, prefix)
+
+      case None =>
+        prefix
+    }
+
+    /**
+     * Parses the components of a submission from a sequence of tokens.
+     *
+     * @param author The author of the tokens.
+     * @param input The tokens to parse.
+     * @param prefix The components that have already been parsed.
+     * @return The components of the submission.
+     */
+    @annotation.tailrec
+    def parseSubmission(
+      author: User,
+      input: Vector[Token],
+      prefix: Vector[Command] = Vector()
+    ): Vector[Command] = input.headOption match {
+
+      case Some(Word(cmd)) if cmd.equalsIgnoreCase("!help") =>
+        parseSubmission(author, input.tail, prefix :+ Command.Help)
+
+      case Some(Word(cmd)) if cmd.equalsIgnoreCase("!open") =>
+        val (slots, output) = readSlots(input.tail)
+        if (slots.isEmpty) parseSubmission(author, output, prefix)
+        else parseSubmission(author, output, prefix :+ Command.Open(slots, None))
+
+      case Some(Word(cmd)) if cmd.equalsIgnoreCase("!abort") =>
+        parseSubmission(author, input.tail, prefix :+ Command.Abort)
+
+      case Some(Word(cmd)) if cmd.equalsIgnoreCase("!close") =>
+        parseSubmission(author, input.tail, prefix :+ Command.Close)
+
+      case Some(Word(cmd)) if cmd.equalsIgnoreCase("!?") =>
+        readUser(input.tail) match {
+          case Some((user, output)) => parseSubmission(author, output, prefix :+ Command.Query(user))
+          case None => parseSubmission(author, input.tail, prefix :+ Command.Query(author))
+        }
+
+      case Some(Word(cmd)) if cmd.equalsIgnoreCase("!assign") =>
+        val (assignments, output) = readAssignments(input.tail)
+        if (assignments.isEmpty) parseSubmission(author, output, prefix)
+        else parseSubmission(author, output, prefix ++ assignments.map(a => Command.Assign(a._1, a._2)))
+
+      case Some(Word(cmd)) if cmd.equalsIgnoreCase("!release") =>
+        readUser(input.tail) match {
+          case Some((user, output)) => parseSubmission(author, output, prefix :+ Command.Release(user))
+          case None => parseSubmission(author, input.tail, prefix :+ Command.Query(author))
+        }
+
+      case Some(Word(cmd)) if cmd.equalsIgnoreCase("!offer") =>
+        readUser(input.tail) match {
+          case Some((user, next)) =>
+            val (roles, output) = readRoles(next)
+            parseSubmission(author, output, prefix ++ roles.map(Command.Volunteer(user, _)))
+          case None =>
+            parseSubmission(author, input.tail, prefix)
+        }
+
+      case Some(Word(cmd)) if cmd.equalsIgnoreCase("!kick") =>
+        readUser(input.tail) match {
+          case Some((user, next)) =>
+            val (roles, output) = readRoles(next)
+            if (roles.isEmpty) parseSubmission(author, output, prefix :+ Command.DropAll(user))
+            else parseSubmission(author, output, prefix ++ roles.map(Command.Drop(user, _)))
+          case None =>
+            parseSubmission(author, input.tail, prefix)
+        }
+
+      case Some(Word(cmd)) if cmd.equalsIgnoreCase("!drop") =>
+        val (roles, output) = readRoles(input.tail)
+        if (roles.isEmpty) parseSubmission(author, output, prefix :+ Command.DropAll(author))
+        else parseSubmission(author, output, prefix ++ roles.map(Command.Drop(author, _)))
+
+      case Some(_) =>
+        readRole(input) match {
+          case Some((role, output)) => parseSubmission(author, output, prefix :+ Command.Volunteer(author, role))
+          case None => parseSubmission(author, input.tail, prefix)
+        }
+
+      case None =>
+        prefix
+    }
+
+    /**
+     * Attempt to read as many consecutive assignments as possible from the input.
+     *
+     * @param input  The input to read from.
+     * @param prefix The previously read assignments.
+     * @return All the assignments that were read and the remaining input.
+     */
+    @annotation.tailrec
+    private def readAssignments(
+      input: Vector[Token],
+      prefix: Vector[(User, Role)] = Vector()
+    ): (Vector[(User, Role)], Vector[Token]) =
+      readUser(input) match {
+        case Some((user, next)) => readRole(next) match {
+          case Some((role, output)) => readAssignments(output, prefix :+ (user -> role))
+          case None => prefix -> input
+        }
+        case None => prefix -> input
+      }
+
+    /**
+     * Attempt to read as many consecutive slots as possible from the input.
+     *
+     * @param input  The input to read from.
+     * @param prefix The previously read slots.
+     * @return All the slots that were read and the remaining input.
+     */
+    @annotation.tailrec
+    private def readSlots(
+      input: Vector[Token],
+      prefix: ListMap[Role, Int] = ListMap()
+    ): (ListMap[Role, Int], Vector[Token]) =
+      readRole(input) match {
+        case Some((role, next)) => readNumber(next) match {
+          case Some((number, output)) => readSlots(output, prefix get role map { previous =>
+            prefix + (role -> (previous + Math.max(0, number)))
+          } getOrElse {
+            prefix + (role -> Math.max(0, number))
+          })
+          case None => readSlots(next, prefix get role map { previous =>
+            prefix + (role -> (previous + 1))
+          } getOrElse {
+            prefix + (role -> 1)
+          })
+        }
+        case None => prefix -> input
+      }
+
+    /**
+     * Attempt to read as many consecutive users as possible from the input.
+     *
+     * @param input  The input to read from.
+     * @param prefix The previously read users.
+     * @return All the users that were read and the remaining input.
+     */
+    @annotation.tailrec
+    private def readUsers(
+      input: Vector[Token],
+      prefix: Vector[User] = Vector()
+    ): (Vector[User], Vector[Token]) =
+      readUser(input) match {
+        case Some((user, output)) => readUsers(output, prefix :+ user)
+        case None => prefix -> input
+      }
+
+    /**
+     * Attempt to read as many consecutive roles as possible from the input.
+     *
+     * @param input  The input to read from.
+     * @param prefix The previously read roles.
+     * @return All the roles that were read and the remaining input.
+     */
+    @annotation.tailrec
+    private def readRoles(
+      input: Vector[Token],
+      prefix: Vector[Role] = Vector()
+    ): (Vector[Role], Vector[Token]) =
+      readRole(input) match {
+        case Some((role, output)) => readRoles(output, prefix :+ role)
+        case None => prefix -> input
+      }
+
+    /**
+     * Attempt to read a user from the specified input.
+     *
+     * @param input The input to attempt to read a user from.
+     * @return The user that was read and the remaining input if a user was read.
+     */
+    private def readUser(input: Vector[Token]): Option[(User, Vector[Token])] =
+      input.headOption collect { case Mention(user) => user -> input.tail }
+
+    /**
+     * Attempt to read a role from the specified input.
+     *
+     * @param input The input to attempt to read a role from.
+     * @return The role that was read and the remaining input if a role was read.
+     */
+    private def readRole(input: Vector[Token]): Option[(Role, Vector[Token])] =
+      input.headOption collect {
+        case Word(role) if role.length > 1 && role(0) == '!' && !Commands(role.toLowerCase) =>
+          Role(role substring 1) -> input.tail
+      }
+
+    /**
+     * Attempt to read a number from the specified input.
+     *
+     * @param input The input to attempt to read a number from.
+     * @return The number that was read and the remaining input if a number was read.
+     */
+    private def readNumber(input: Vector[Token]): Option[(Int, Vector[Token])] =
+      input.headOption flatMap {
+        case Word(number) => try Some(number.toInt) catch {
+          case _: NumberFormatException => None
+        }
+        case _ => None
+      } map (_ -> input.tail)
+
+  }
 
 }
