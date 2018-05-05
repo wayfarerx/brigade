@@ -41,10 +41,10 @@ object Event {
   /**
    * Extracts the data from the specified event.
    *
-   * @param evt The event to extract from.
+   * @param event The event to extract from.
    * @return The data extracted from the specified event.
    */
-  def unapply(evt: Event): Option[Long] = Some(evt.timestamp)
+  def unapply(event: Event): Option[Long] = Some(event.timestamp)
 
   /**
    * Base type for events sent to a channel.
@@ -59,10 +59,10 @@ object Event {
     /**
      * Extracts the data from the specified incoming event.
      *
-     * @param in The incoming event to extract from.
+     * @param incoming The incoming event to extract from.
      * @return The data extracted from the specified incoming event.
      */
-    def unapply(in: Incoming): Option[Long] = Some(in.timestamp)
+    def unapply(incoming: Incoming): Option[Long] = Some(incoming.timestamp)
 
   }
 
@@ -79,21 +79,43 @@ object Event {
     /**
      * Extracts the data from the specified outgoing event.
      *
-     * @param out The outgoing event to extract from.
+     * @param outgoing The outgoing event to extract from.
      * @return The data extracted from the specified outgoing event.
      */
-    def unapply(out: Outgoing): Option[Long] = Some(out.timestamp)
+    def unapply(outgoing: Outgoing): Option[Long] = Some(outgoing.timestamp)
 
   }
 
   /**
    * Initializes a channel.
    *
+   * @param session   The session that was loaded if one was found.
    * @param timestamp The instant that this event occurred.
    */
   case class Initialize(
+    session: Option[Brigade.Session],
     timestamp: Long
   ) extends Incoming
+
+  /**
+   * Base type for signal events.
+   */
+  sealed trait Signal extends Incoming
+
+  /**
+   * Extractor for signal events.
+   */
+  object Signal {
+
+    /**
+     * Extracts the data from the specified signal event.
+     *
+     * @param signal The signal event to extract from.
+     * @return The data extracted from the specified signal event.
+     */
+    def unapply(signal: Signal): Option[Long] = Some(signal.timestamp)
+
+  }
 
   /**
    * Reconfigures a channel with the specified messages.
@@ -104,7 +126,7 @@ object Event {
   case class Configure(
     messages: Vector[Message],
     timestamp: Long
-  ) extends Incoming
+  ) extends Signal
 
   /**
    * Submits a message to a channel.
@@ -115,7 +137,27 @@ object Event {
   case class Submit(
     message: Message,
     timestamp: Long
-  ) extends Incoming
+  ) extends Signal
+
+  /**
+   * Base type for effect events.
+   */
+  sealed trait Effect extends Outgoing
+
+  /**
+   * Extractor for effect events.
+   */
+  object Effect {
+
+    /**
+     * Extracts the data from the specified effect event.
+     *
+     * @param effect The effect event to extract from.
+     * @return The data extracted from the specified effect event.
+     */
+    def unapply(effect: Effect): Option[Long] = Some(effect.timestamp)
+
+  }
 
   /**
    * Saves the brigade's session.
@@ -128,7 +170,7 @@ object Event {
     id: Channel.Id,
     session: Brigade.Session,
     timestamp: Long
-  ) extends Outgoing
+  ) extends Effect
 
   /**
    * Prepends to the persistent history of the specified channel.
@@ -141,7 +183,7 @@ object Event {
     id: Channel.Id,
     teams: Vector[Team],
     timestamp: Long
-  ) extends Outgoing
+  ) extends Effect
 
   /**
    * A message that instructs the server to post replies.
@@ -154,7 +196,7 @@ object Event {
     channelId: Channel.Id,
     replies: Vector[Reply],
     timestamp: Long
-  ) extends Outgoing
+  ) extends Effect
 
   /**
    * Base type for events that expect a response.
@@ -174,46 +216,33 @@ object Event {
     /**
      * Extracts the data from the specified request.
      *
-     * @param req The request to extract from.
+     * @param request The request to extract from.
      * @return The data extracted from the specified request.
      */
-    def unapply[R <: Response](req: Request[R]): Option[(ActorRef[R], Long)] =
-      Some(req.respondTo -> req.timestamp)
+    def unapply[R <: Response](request: Request[R]): Option[(ActorRef[R], Long)] =
+      Some(request.respondTo -> request.timestamp)
 
   }
 
   /**
-   * A request that loads a session.
-   *
-   * @param channelId The if of the channel to load the session for.
-   * @param respondTo The actor to respond to.
-   * @param timestamp The instant that this event occurred.
-   */
-  case class LoadSession(
-    channelId: Channel.Id,
-    respondTo: ActorRef[SessionLoaded],
-    timestamp: Long
-  ) extends Request[SessionLoaded]
-
-  /**
    * Notifies a channel that messages have been loaded.
    *
-   * @param configuration The messages that configure the brigade.
-   * @param submissions   The messages to submit to the brigade.
-   * @param respondTo     The actor to respond to.
-   * @param timestamp     The instant that this event occurred.
+   * @param channelId    The if of the channel to load the messages for.
+   * @param lastModified The last known time messages were received.
+   * @param respondTo    The actor to respond to.
+   * @param timestamp    The instant that this event occurred.
    */
   case class LoadMessages(
-    configuration: Vector[Message],
-    submissions: Vector[Message],
+    channelId: Channel.Id,
+    lastModified: Long,
     respondTo: ActorRef[MessagesLoaded],
     timestamp: Long
   ) extends Request[MessagesLoaded]
 
   /**
-   * A request that loads a session.
+   * A request that loads a channel's history.
    *
-   * @param channelId The if of the channel to load the session for.
+   * @param channelId The if of the channel to load the history for.
    * @param depth     The number of recent team sets to load.
    * @param respondTo The actor to respond to.
    * @param timestamp The instant that this event occurred.
@@ -229,13 +258,11 @@ object Event {
    * A message that instructs the server to prepare a message for displaying teams.
    *
    * @param channelId The ID of the channel to post to.
-   * @param teams     The teams to post.
    * @param respondTo The actor to respond to.
    * @param timestamp The instant that this event occurred.
    */
   case class PrepareTeams(
     channelId: Channel.Id,
-    teams: Vector[Team],
     respondTo: ActorRef[TeamsPrepared],
     timestamp: Long
   ) extends Request[TeamsPrepared]
@@ -253,23 +280,12 @@ object Event {
     /**
      * Extracts the data from the specified response.
      *
-     * @param res The response to extract from.
+     * @param response The response to extract from.
      * @return The data extracted from the specified response.
      */
-    def unapply(res: Response): Option[Long] = Some(res.timestamp)
+    def unapply(response: Response): Option[Long] = Some(response.timestamp)
 
   }
-
-  /**
-   * Notifies a channel that a session has been loaded.
-   *
-   * @param session   The session that was loaded.
-   * @param timestamp The instant that this event occurred.
-   */
-  case class SessionLoaded(
-    session: Brigade.Session,
-    timestamp: Long
-  ) extends Response
 
   /**
    * Notifies a channel that messages have been loaded.
@@ -279,8 +295,8 @@ object Event {
    * @param timestamp     The instant that this event occurred.
    */
   case class MessagesLoaded(
-    configuration: Vector[Message],
-    submissions: Vector[Message],
+    configuration: Option[Configure],
+    submissions: Vector[Submit],
     timestamp: Long
   ) extends Response
 

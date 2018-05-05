@@ -40,22 +40,22 @@ case class Brigade(
    *
    * @param organizers    The users that can administer the brigade.
    * @param configuration The configuration that specifies how teams are built.
-   * @param Long          The instant that this command was generated at.
+   * @param timestamp     The instant that this configuration was created at.
    * @return The configured brigade and any generated replies.
    */
   def configure(
     organizers: Set[User],
     configuration: Configuration,
-    Long: Long
+    timestamp: Long
   ): (Brigade, Vector[Reply]) = session match {
     case s@Inactive(_) =>
-      Brigade(organizers, configuration, s.copy(lastModified = Long)) ->
+      Brigade(organizers, configuration, s.copy(lastModified = timestamp)) ->
         Vector()
     case s@Active(organizer, _, teamsMsgId, slots, _, _) if organizers(organizer) =>
-      Brigade(organizers, configuration, s.copy(lastModified = Long)) ->
+      Brigade(organizers, configuration, s.copy(lastModified = timestamp)) ->
         Vector(Reply.UpdateTeams(teamsMsgId, slots, s.currentTeams(organizers, configuration)))
     case Active(_, _, teamsMsgId, _, _, _) =>
-      Brigade(organizers, configuration, Inactive(Long)) ->
+      Brigade(organizers, configuration, Inactive(timestamp)) ->
         Vector(Reply.AbandonTeams(teamsMsgId))
   }
 
@@ -65,16 +65,16 @@ case class Brigade(
    * @param author    The author of the commands.
    * @param messageId The ID of the message the commands came from.
    * @param commands  The commands to submit.
-   * @param Long      The instant that this command was generated at.
+   * @param timestamp The instant that this submission was created at.
    * @return The resulting brigade and any generated replies.
    */
   def submit(
     author: User,
     messageId: Message.Id,
     commands: Vector[Command],
-    Long: Long
+    timestamp: Long
   ): (Brigade, Vector[Reply]) = {
-    val (nextSession, replies) = session(organizers, configuration, author, messageId, commands, Long)
+    val (nextSession, replies) = session(organizers, configuration, author, messageId, commands, timestamp)
     val nextConfiguration = replies.collect {
       case Reply.FinalizeTeams(_, teams) => teams
     }.headOption map { teams =>
@@ -83,7 +83,7 @@ case class Brigade(
         case Configuration.Default => Configuration.Default
       }
     } getOrElse configuration
-    copy(configuration = nextConfiguration, session = nextSession) -> replies
+    copy(configuration = nextConfiguration, session = nextSession) -> Reply.normalize(replies)
   }
 
 }
