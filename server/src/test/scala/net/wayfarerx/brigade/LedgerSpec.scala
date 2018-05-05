@@ -1,7 +1,7 @@
 /*
  * LedgerSpec.scala
  *
- * Copyright 2017 wayfarerx <x@wayfarerx.net> (@thewayfarerx)
+ * Copyright 2018 wayfarerx <x@wayfarerx.net> (@thewayfarerx)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ package net.wayfarerx.brigade
 import org.scalatest._
 
 /**
- * Test case for the ledger.
+ * Test case for the team ledger.
  */
 class LedgerSpec extends FlatSpec with Matchers {
 

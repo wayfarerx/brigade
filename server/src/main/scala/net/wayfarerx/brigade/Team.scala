@@ -28,7 +28,7 @@ import scala.collection.immutable.ListMap
 final class Team private (val members: ListMap[Role, Vector[User]]) extends AnyVal {
 
   /* Return this role as a string. */
-  override def toString: String = s"Team($members)"
+  override def toString: String = s"Team(${members map (e => s"${e._1} = ${e._2 mkString ", "}") mkString ", "})"
 
 }
 

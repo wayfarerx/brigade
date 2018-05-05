@@ -160,6 +160,9 @@ final class Channel private(id: Channel.Id, owner: User, outgoing: ActorRef[Even
     timestamp: Long
   ): Unit = {
     if (brigade.session != result.session) outgoing ! Event.SaveSession(id, result.session, timestamp)
+    replies collect {
+      case Reply.FinalizeTeams(_, teams) => Event.PrependToHistory(id, teams, timestamp)
+    } foreach (outgoing ! _)
     if (replies.nonEmpty) outgoing ! Event.PostReplies(id, replies, timestamp)
   }
 

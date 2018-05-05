@@ -1,7 +1,7 @@
 /*
  * BrigadeSpec.scala
  *
- * Copyright 2017 wayfarerx <x@wayfarerx.net> (@thewayfarerx)
+ * Copyright 2018 wayfarerx <x@wayfarerx.net> (@thewayfarerx)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import org.scalatest._
 import scala.collection.immutable.ListMap
 
 /**
- * Test case for the brigade.
+ * Test case for the brigade model.
  */
 class BrigadeSpec extends FlatSpec with Matchers {
 

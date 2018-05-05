@@ -1,7 +1,7 @@
 /*
  * History.scala
  *
- * Copyright 2017 wayfarerx <x@wayfarerx.net> (@thewayfarerx)
+ * Copyright 2018 wayfarerx <x@wayfarerx.net> (@thewayfarerx)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ package net.wayfarerx.brigade
 final class History private (val teams: Vector[Vector[Team]]) extends AnyVal {
 
   /* Return this role as a string. */
-  override def toString: String = s"History($teams)"
+  override def toString: String = s"History(${teams map (_.mkString("(", ", ", ")")) mkString ","})"
 
 }
 
