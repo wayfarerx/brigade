@@ -20,6 +20,8 @@ package net.wayfarerx.brigade
 
 import org.scalatest._
 
+import scala.collection.immutable.ListMap
+
 /**
  * Test case for the team roster.
  */
@@ -46,8 +48,6 @@ class RosterSpec extends FlatSpec with Matchers {
   val sue = User(13)
   val zoe = User(14)
 
-  /*
-
   it should "build partial teams" in {
     val roster = Roster(
       Vector(amy -> tank),
@@ -57,7 +57,7 @@ class RosterSpec extends FlatSpec with Matchers {
         (sue, heal, 0)
       )
     )
-    val teams = roster.buildTeams(ListMap(tank -> 1, heal -> 1, dps -> 2), Roster.Fill)
+    val teams = roster.buildTeams(ListMap(tank -> 1, heal -> 1, dps -> 2), History())
     teams shouldBe Vector(Team(ListMap(
       tank -> Vector(amy),
       heal -> Vector(bob),
@@ -77,7 +77,7 @@ class RosterSpec extends FlatSpec with Matchers {
         (sue, dps, 1)
       )
     )
-    val teams = roster.buildTeams(ListMap(tank -> 1, heal -> 1, dps -> 2), Roster.Fill)
+    val teams = roster.buildTeams(ListMap(tank -> 1, heal -> 1, dps -> 2), History())
     teams shouldBe Vector(Team(ListMap(
       tank -> Vector(amy),
       heal -> Vector(bob),
@@ -109,7 +109,7 @@ class RosterSpec extends FlatSpec with Matchers {
         (zoe, dps, 1)
       )
     )
-    val teams = roster.buildTeams(ListMap(tank -> 2, heal -> 2, dps -> 8), Roster.Fill)
+    val teams = roster.buildTeams(ListMap(tank -> 2, heal -> 2, dps -> 8), History())
     teams shouldBe Vector(Team(ListMap(
       tank -> Vector(amy, gus),
       heal -> Vector(ann, ida),
@@ -134,8 +134,7 @@ class RosterSpec extends FlatSpec with Matchers {
       )
     )
     val teams = roster.buildTeams(
-      ListMap(tank -> 1, heal -> 1, dps -> 2),
-      Roster.Rotate(History(Vector(Set(oldTeam))))
+      ListMap(tank -> 1, heal -> 1, dps -> 2), History(Vector(Vector(oldTeam)))
     )
     teams shouldBe Vector(Team(ListMap(
       tank -> Vector(amy),
@@ -159,7 +158,7 @@ class RosterSpec extends FlatSpec with Matchers {
         (sam, dps, 0)
       )
     )
-    val teams = roster.buildTeams(ListMap(tank -> 1, heal -> 1, dps -> 2), Roster.Fill)
+    val teams = roster.buildTeams(ListMap(tank -> 1, heal -> 1, dps -> 2), History())
     teams shouldBe Vector(Team(ListMap(
       tank -> Vector(amy),
       heal -> Vector(bob),
@@ -183,14 +182,12 @@ class RosterSpec extends FlatSpec with Matchers {
         (jim, heal, 1)
       )
     )
-    val teams = roster.buildTeams(ListMap(tank -> 1, heal -> 1, dps -> 2), Roster.Fill)
+    val teams = roster.buildTeams(ListMap(tank -> 1, heal -> 1, dps -> 2), History())
     teams shouldBe Vector(Team(ListMap(
       tank -> Vector(amy),
       heal -> Vector(jim),
       dps -> Vector(bob, sue)
     )))
   }
-
-  */
 
 }

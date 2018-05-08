@@ -35,7 +35,7 @@ import sx.blah.discord.api.events.IListener
  * Main entry point for the bot.
  */
 object Program {
-
+/*
   /**
    * Main entry point for the bot.
    *
@@ -120,5 +120,5 @@ object Program {
       }
     }
   }
-
+*/
 }

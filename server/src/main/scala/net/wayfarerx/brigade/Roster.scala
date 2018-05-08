@@ -140,10 +140,8 @@ object Roster {
       selectRole(openings, candidates) match {
         case Some(role) =>
           val user = chooseUser(candidates filter (_.role == role))
-          solve(Team(team.members get role match {
-            case Some(users) => team.members + ((role, users :+ user))
-            case None => team.members + ((role, Vector(user)))
-          }),
+          solve(
+            Team(team.members + ((role, team.members(role) :+ user))),
             openings + (role -> (openings(role) - 1)),
             candidates filterNot (_.user == user))
         case None => team

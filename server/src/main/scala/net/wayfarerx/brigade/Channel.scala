@@ -18,7 +18,7 @@
 
 package net.wayfarerx.brigade
 
-import akka.actor.typed.ActorRef
+import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl._
 
 /**
@@ -42,12 +42,16 @@ final class Channel private(id: Channel.Id, owner: User, outgoing: ActorRef[Even
   private def onMessagesLoaded(
     session: Brigade.Session,
     buffer: Buffer
-  ): Behaviors.Immutable[Event.Incoming] = buffer.buffering {
-    case (ctx, next, Event.MessagesLoaded(configuration, submissions, _)) => drain(
-      ctx,
-      Brigade(Set(), Configuration.Default, session),
-      configuration.map(next :+ _).getOrElse(next) :+ (submissions: _*)
-    )
+  ): Behavior[Event.Incoming] = buffer.buffering {
+    case (ctx, next, Event.MessagesLoaded(configuration, submissions, _)) =>
+      val brigade = Brigade(Set(), Configuration.Default, session)
+      drain(
+        ctx,
+        brigade,
+        brigade,
+        configuration.map(next :+ _).getOrElse(next) :+ (submissions: _*),
+        Vector()
+      )
   }
 
   /**
@@ -62,11 +66,10 @@ final class Channel private(id: Channel.Id, owner: User, outgoing: ActorRef[Even
     brigade: Brigade,
     buffer: Buffer,
     organizers: Set[User]
-  ): Behaviors.Immutable[Event.Incoming] = buffer.buffering {
+  ): Behavior[Event.Incoming] = buffer.buffering {
     case (ctx, next, Event.HistoryLoaded(history, timestamp)) =>
       val (result, replies) = continueConfigure(brigade, organizers, history, timestamp)
-      finishEvent(brigade, result, replies, timestamp)
-      drain(ctx, brigade, next)
+      drain(ctx, brigade, result, next, replies)
   }
 
   /**
@@ -83,11 +86,10 @@ final class Channel private(id: Channel.Id, owner: User, outgoing: ActorRef[Even
     buffer: Buffer,
     event: Event.Submit,
     commands: Vector[Command]
-  ): Behaviors.Immutable[Event.Incoming] = buffer.buffering {
+  ): Behavior[Event.Incoming] = buffer.buffering {
     case (ctx, next, Event.TeamsPrepared(teamsMsgId, timestamp)) =>
       val (result, replies) = continueSubmit(brigade, event, commands, teamsMsgId, timestamp)
-      finishEvent(brigade, result, replies, timestamp)
-      drain(ctx, brigade, next)
+      drain(ctx, brigade, result, next, replies)
   }
 
   /**
@@ -98,10 +100,10 @@ final class Channel private(id: Channel.Id, owner: User, outgoing: ActorRef[Even
    */
   private def waiting(
     brigade: Brigade
-  ): Behaviors.Immutable[Event.Incoming] = Behaviors.immutable[Event.Incoming] { (ctx, evt) =>
+  ): Behavior[Event.Incoming] = Behaviors.receive { (ctx, evt) =>
     evt match {
-      case configure@Event.Configure(_, _) => drain(ctx, brigade, Buffer() :+ configure)
-      case submit@Event.Submit(_, _) => drain(ctx, brigade, Buffer() :+ submit)
+      case configure@Event.Configure(_, _) => drain(ctx, brigade, brigade, Buffer() :+ configure, Vector())
+      case submit@Event.Submit(_, _) => drain(ctx, brigade, brigade, Buffer() :+ submit, Vector())
       case _ => Behaviors.same
     }
   }
@@ -110,60 +112,65 @@ final class Channel private(id: Channel.Id, owner: User, outgoing: ActorRef[Even
    * Drains as many events as possible from the buffer.
    *
    * @param ctx     The current actor context.
-   * @param brigade The current brigade.
+   * @param current The current brigade.
    * @param buffer  The event buffer to use.
    * @return The next behavior to use after draining.
    */
   @annotation.tailrec
   private def drain(
     ctx: ActorContext[Event.Incoming],
-    brigade: Brigade,
-    buffer: Buffer
-  ): Behaviors.Immutable[Event.Incoming] = {
+    starting: Brigade,
+    current: Brigade,
+    buffer: Buffer,
+    replies: Vector[Reply]
+  ): Behavior[Event.Incoming] = {
     val (next, evt) = buffer.next
     evt match {
-      case Some(event@Event.Configure(_, _)) =>
-        applyConfigure(brigade, event.copy(messages = event.messages.filter(_.author == owner))) match {
-          case Left((result, replies)) =>
-            finishEvent(brigade, result, replies, event.timestamp)
-            drain(ctx, result, next)
+      case Some(evt@Event.Configure(_, _)) =>
+        applyConfigure(current, evt.copy(messages = evt.messages.filter(_.author == owner))) match {
+          case Left((result, moreReplies)) =>
+            drain(ctx, starting, result, next, replies ++ moreReplies)
           case Right((organizers, history)) =>
-            outgoing ! Event.LoadHistory(id, history, ctx.self, event.timestamp)
-            onHistoryLoaded(brigade, next, organizers)
+            flush(starting, current, replies, evt.timestamp)
+            outgoing ! Event.LoadHistory(id, history, ctx.self, evt.timestamp)
+            onHistoryLoaded(current, next, organizers)
         }
       case Some(evt@Event.Submit(_, _)) =>
-        applySubmit(brigade, evt) match {
-          case Left((result, replies)) =>
-            finishEvent(brigade, result, replies, evt.timestamp)
-            drain(ctx, result, next)
+        applySubmit(current, evt) match {
+          case Left((result, moreReplies)) =>
+            drain(ctx, starting, result, next, replies ++ moreReplies)
           case Right(commands) =>
+            flush(starting, current, replies, evt.timestamp)
             outgoing ! Event.PrepareTeams(id, ctx.self, evt.timestamp)
-            onTeamsPrepared(brigade, next, evt, commands)
+            onTeamsPrepared(current, next, evt, commands)
         }
       case None =>
-        waiting(brigade)
+        flush(starting, current, replies, current.session.lastModified)
+        waiting(current)
     }
   }
 
   /**
    * Completes the processing of an event by sending effect messages.
    *
-   * @param brigade   The previous brigade.
+   * @param starting  The previous brigade.
    * @param result    The current brigade.
    * @param replies   The replies that were generated.
    * @param timestamp The instant this event occurred at.
    */
-  private def finishEvent(
-    brigade: Brigade,
+  private def flush(
+    starting: Brigade,
     result: Brigade,
     replies: Vector[Reply],
     timestamp: Long
   ): Unit = {
-    if (brigade.session != result.session) outgoing ! Event.SaveSession(id, result.session, timestamp)
-    replies collect {
+    val normalized = Reply.normalize(replies)
+    if (starting.session.lastModified != result.session.lastModified)
+      outgoing ! Event.SaveSession(id, result.session, timestamp)
+    normalized collect {
       case Reply.FinalizeTeams(_, teams) => Event.PrependToHistory(id, teams, timestamp)
     } foreach (outgoing ! _)
-    if (replies.nonEmpty) outgoing ! Event.PostReplies(id, replies, timestamp)
+    if (normalized.nonEmpty) outgoing ! Event.PostReplies(id, normalized, timestamp)
   }
 
 }
@@ -181,8 +188,8 @@ object Channel {
    * @param outgoing The actor to send all outgoing events to.
    * @return The behavior of a new channel.
    */
-  def apply(id: Id, owner: User, outgoing: ActorRef[Event.Outgoing]): Behaviors.Immutable[Event.Incoming] =
-    Behaviors.immutable { (ctx, evt) =>
+  def apply(id: Id, owner: User, outgoing: ActorRef[Event.Outgoing]): Behavior[Event.Incoming] =
+    Behaviors.receive { (ctx, evt) =>
       evt match {
         case Event.Initialize(session, timestamp) =>
           outgoing ! Event.LoadMessages(id, session map (_.lastModified) getOrElse 0, ctx.self, timestamp)
@@ -312,7 +319,7 @@ object Channel {
    * @param configuration The buffered configure event.
    * @param submissions   The buffered submit events.
    */
-  case class Buffer private(configuration: Option[Event.Configure], submissions: Vector[Event.Submit]) {
+  case class Buffer (configuration: Option[Event.Configure], submissions: Vector[Event.Submit]) {
 
     /**
      * Modifies the buffered configure signal.
@@ -350,9 +357,9 @@ object Channel {
      * @return A behavior that buffers events until the partial function is satisfied.
      */
     def buffering(
-      done: PartialFunction[(ActorContext[Event.Incoming], Buffer, Event.Incoming), Behaviors.Immutable[Event.Incoming]]
-    ): Behaviors.Immutable[Event.Incoming] =
-      Behaviors.immutable[Event.Incoming] { (ctx, evt) =>
+      done: PartialFunction[(ActorContext[Event.Incoming], Buffer, Event.Incoming), Behavior[Event.Incoming]]
+    ): Behavior[Event.Incoming] =
+      Behaviors.receive { (ctx, evt) =>
         done.applyOrElse((ctx, this, evt), (from: (ActorContext[Event.Incoming], Buffer, Event.Incoming)) =>
           from._3 match {
             case signal@Event.Configure(_, _) => (this :+ signal).buffering(done)

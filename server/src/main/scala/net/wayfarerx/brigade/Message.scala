@@ -195,21 +195,17 @@ object Message {
         parseSubmission(author, input.tail, prefix :+ Command.Close)
 
       case Some(Word(cmd)) if cmd.equalsIgnoreCase("!?") =>
-        readUser(input.tail) match {
-          case Some((user, output)) => parseSubmission(author, output, prefix :+ Command.Query(user))
-          case None => parseSubmission(author, input.tail, prefix :+ Command.Query(author))
-        }
+        val (users, output) = readUsers(input.tail)
+        if (users.isEmpty) parseSubmission(author, input.tail, prefix :+ Command.Query(author))
+        else parseSubmission(author, output, prefix ++ users.map(Command.Query))
 
       case Some(Word(cmd)) if cmd.equalsIgnoreCase("!assign") =>
         val (assignments, output) = readAssignments(input.tail)
-        if (assignments.isEmpty) parseSubmission(author, output, prefix)
-        else parseSubmission(author, output, prefix ++ assignments.map(a => Command.Assign(a._1, a._2)))
+        parseSubmission(author, output, prefix ++ assignments.map(a => Command.Assign(a._1, a._2)))
 
       case Some(Word(cmd)) if cmd.equalsIgnoreCase("!release") =>
-        readUser(input.tail) match {
-          case Some((user, output)) => parseSubmission(author, output, prefix :+ Command.Release(user))
-          case None => parseSubmission(author, input.tail, prefix :+ Command.Query(author))
-        }
+        val (users, output) = readUsers(input.tail)
+        parseSubmission(author, output, prefix ++ users.map(Command.Release))
 
       case Some(Word(cmd)) if cmd.equalsIgnoreCase("!offer") =>
         readUser(input.tail) match {

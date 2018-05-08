@@ -36,20 +36,18 @@ class LedgerSpec extends FlatSpec with Matchers {
   private val healer = Role("healer")
   private val dps = Role("dps")
 
-  /*
-
   it should "build rosters from simple ledgers" in {
-    Ledger(
-      Ledger.Entry(Message.Id(1), Command.Assign(bob, tank)),
-      Ledger.Entry(Message.Id(2), Command.Assign(sue, healer)),
-      Ledger.Entry(Message.Id(3), Command.Volunteer(bob, healer), Command.Volunteer(bob, dps)),
-      Ledger.Entry(Message.Id(4), Command.Volunteer(sue, tank)),
-      Ledger.Entry(Message.Id(5), Command.Volunteer(jim, dps)),
-      Ledger.Entry(Message.Id(6), Command.Volunteer(kim, healer), Command.Volunteer(kim, dps)),
-      Ledger.Entry(Message.Id(7), Command.Release(bob)),
-      Ledger.Entry(Message.Id(8), Command.Drop(bob, healer)),
-      Ledger.Entry(Message.Id(9), Command.DropAll(jim))
-    ).buildRoster() shouldBe Roster(
+    (Ledger()
+      :+ Ledger.Entry(Message.Id(1), bob, Command.Assign(bob, tank))
+      :+ Ledger.Entry(Message.Id(2), bob, Command.Assign(sue, healer))
+      :+ Ledger.Entry(Message.Id(3), bob, Command.Volunteer(bob, healer), Command.Volunteer(bob, dps))
+      :+ Ledger.Entry(Message.Id(4), sue, Command.Volunteer(sue, tank))
+      :+ Ledger.Entry(Message.Id(5), jim, Command.Volunteer(jim, dps))
+      :+ Ledger.Entry(Message.Id(6), kim, Command.Volunteer(kim, healer), Command.Volunteer(kim, dps))
+      :+ Ledger.Entry(Message.Id(7), bob, Command.Release(bob))
+      :+ Ledger.Entry(Message.Id(8), bob, Command.Drop(bob, healer))
+      :+ Ledger.Entry(Message.Id(9), jim, Command.DropAll(jim))
+      ).buildRoster(Set(bob)) shouldBe Roster(
       Vector(
         sue -> healer
       ),
@@ -63,16 +61,16 @@ class LedgerSpec extends FlatSpec with Matchers {
   }
 
   it should "build rosters from complex ledgers with edits" in {
-    Ledger(
-      Ledger.Entry(Message.Id(1), Command.Assign(bob, tank)),
-      Ledger.Entry(Message.Id(2), Command.Assign(sue, healer)),
-      Ledger.Entry(Message.Id(3), Command.Volunteer(bob, healer), Command.Volunteer(bob, dps)),
-      Ledger.Entry(Message.Id(4), Command.Volunteer(sue, tank)),
-      Ledger.Entry(Message.Id(5), Command.Volunteer(jim, dps)),
-      Ledger.Entry(Message.Id(6), Command.Volunteer(kim, healer), Command.Volunteer(kim, dps)),
-      Ledger.Entry(Message.Id(1), Command.Assign(bob, dps)),
-      Ledger.Entry(Message.Id(3), Command.Volunteer(bob, tank), Command.Volunteer(bob, dps))
-    ).buildRoster() shouldBe Roster(
+    (Ledger()
+      :+ Ledger.Entry(Message.Id(1), bob, Command.Assign(bob, tank))
+      :+ Ledger.Entry(Message.Id(2), bob, Command.Assign(sue, healer))
+      :+ Ledger.Entry(Message.Id(3), bob, Command.Volunteer(bob, healer), Command.Volunteer(bob, dps))
+      :+ Ledger.Entry(Message.Id(4), sue, Command.Volunteer(sue, tank))
+      :+ Ledger.Entry(Message.Id(5), jim, Command.Volunteer(jim, dps))
+      :+ Ledger.Entry(Message.Id(6), kim, Command.Volunteer(kim, healer), Command.Volunteer(kim, dps))
+      :+ Ledger.Entry(Message.Id(1), bob, Command.Assign(bob, dps))
+      :+ Ledger.Entry(Message.Id(3), bob, Command.Volunteer(bob, tank), Command.Volunteer(bob, dps))
+      ).buildRoster(Set(bob)) shouldBe Roster(
       Vector(
         sue -> healer,
         bob -> dps
@@ -89,10 +87,10 @@ class LedgerSpec extends FlatSpec with Matchers {
   }
 
   it should "preserve user preference after edits" in {
-    Ledger(
-      Ledger.Entry(Message.Id(1), Command.Volunteer(bob, tank), Command.Volunteer(bob, healer)),
-      Ledger.Entry(Message.Id(1), Command.Volunteer(bob, healer), Command.Volunteer(bob, tank))
-    ).buildRoster() shouldBe Roster(
+    (Ledger()
+      :+ Ledger.Entry(Message.Id(1), bob, Command.Volunteer(bob, tank), Command.Volunteer(bob, healer))
+      :+ Ledger.Entry(Message.Id(1), bob, Command.Volunteer(bob, healer), Command.Volunteer(bob, tank))
+      ).buildRoster(Set(bob)) shouldBe Roster(
       Vector(),
       Vector(
         (bob, tank, 1),
@@ -101,7 +99,5 @@ class LedgerSpec extends FlatSpec with Matchers {
     )
 
   }
-
-  */
 
 }

@@ -20,11 +20,66 @@ package net.wayfarerx.brigade
 
 import org.scalatest._
 
+import scala.collection.immutable.ListMap
+
 /**
  * Test case for the reply normalizer.
  */
 class ReplySpec extends FlatSpec with Matchers {
 
   behavior of "Reply"
+
+  private val bob = User(1)
+  private val sue = User(2)
+  private val jim = User(3)
+  private val kim = User(4)
+
+  private val tank = Role("tank")
+  private val healer = Role("healer")
+  private val dps = Role("dps")
+
+  it should "normalize away all but the first usage reply" in {
+    Reply.normalize(Vector(
+      Reply.Usage,
+      Reply.Status(bob, Vector(tank), Vector(dps)),
+      Reply.Usage,
+      Reply.Status(sue, Vector(healer), Vector(dps)),
+      Reply.Usage
+    )) shouldBe Vector(
+      Reply.Usage,
+      Reply.Status(bob, Vector(tank), Vector(dps)),
+      Reply.Status(sue, Vector(healer), Vector(dps))
+    )
+  }
+
+  it should "normalize away all but the last status reply for each user" in {
+    Reply.normalize(Vector(
+      Reply.Status(bob, Vector(tank), Vector(dps)),
+      Reply.Status(sue, Vector(healer), Vector(dps)),
+      Reply.Usage,
+      Reply.Status(sue, Vector(tank), Vector(dps)),
+      Reply.Status(bob, Vector(healer), Vector(dps))
+    )) shouldBe Vector(
+      Reply.Usage,
+      Reply.Status(sue, Vector(tank), Vector(dps)),
+      Reply.Status(bob, Vector(healer), Vector(dps))
+    )
+  }
+
+  it should "normalize away all but the last team reply" in {
+    Reply.normalize(Vector(
+      Reply.Status(bob, Vector(tank), Vector(dps)),
+      Reply.UpdateTeams(Message.Id(0), ListMap(tank -> 1), Vector(Team())),
+      Reply.Status(sue, Vector(healer), Vector(dps)),
+      Reply.FinalizeTeams(Message.Id(0), Vector(Team())),
+      Reply.Usage,
+      Reply.AbandonTeams(Message.Id(0))
+    )) shouldBe Vector(
+      Reply.Status(bob, Vector(tank), Vector(dps)),
+      Reply.Status(sue, Vector(healer), Vector(dps)),
+      Reply.Usage,
+      Reply.AbandonTeams(Message.Id(0))
+    )
+  }
 
 }

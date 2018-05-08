@@ -83,7 +83,7 @@ case class Brigade(
         case Configuration.Default => Configuration.Default
       }
     } getOrElse configuration
-    copy(configuration = nextConfiguration, session = nextSession) -> Reply.normalize(replies)
+    copy(configuration = nextConfiguration, session = nextSession) -> replies
   }
 
 }
@@ -92,6 +92,13 @@ case class Brigade(
  * Definitions associated with brigades.
  */
 object Brigade {
+
+  /**
+   * Creates a new brigade.
+   *
+   * @return A new, disabled brigade.
+   */
+  def apply(): Brigade = Brigade(Set(), Configuration.Default, Brigade.Inactive(0L))
 
   /**
    * Takes all elements of the input until one satisfies the filter.
@@ -197,8 +204,8 @@ object Brigade {
             Math.max(lastModified, timestamp)
           )
           result -> (Reply.UpdateTeams(teamsMsgId, slots, Vector(Team(ListMap()))) +: replies)
-      } getOrElse Inactive(Math.max(lastModified, timestamp)) -> Vector()
-      result -> (if (prefix contains Command.Help) Reply.Usage +: replies else replies)
+      } getOrElse this -> Vector()
+      result -> (if (organizers.nonEmpty && prefix.contains(Command.Help)) Reply.Usage +: replies else replies)
     }
 
   }
@@ -284,6 +291,7 @@ object Brigade {
       val (prefix, terminal) = scan(commands) { case cmd@Command.Terminal() if organizers(author) => cmd }
       val (mutations, replies) = ((Vector[Command.Mutation](), Vector[Reply]()) /: prefix) { (previous, command) =>
         val (_mutations, _replies) = previous
+        println(command)
         command match {
           // Display usage for help commands.
           case Command.Help =>

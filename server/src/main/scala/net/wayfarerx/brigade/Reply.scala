@@ -39,10 +39,9 @@ object Reply {
    */
   def normalize(replies: Vector[Reply]): Vector[Reply] = {
     val indexed = replies.zipWithIndex
-    val firstUsage = indexed.find {
-      case (Usage, _) => true
-      case _ => false
-    }.toVector
+    val firstUsage = indexed.collect {
+      case item@(Usage, _) => item
+    }.headOption.toVector
     val lastStatuses = indexed.collect {
       case (status@Status(_, _, _), index) => status -> index
     }.groupBy(_._1.user).values.map(_.last).toVector
