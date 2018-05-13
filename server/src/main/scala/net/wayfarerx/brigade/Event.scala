@@ -162,12 +162,12 @@ object Event {
   /**
    * Saves the brigade's session.
    *
-   * @param id        The ID of the channel to save the session for.
+   * @param channelId The ID of the channel to save the session for.
    * @param session   The session to save.
    * @param timestamp The instant that this event occurred.
    */
   case class SaveSession(
-    id: Channel.Id,
+    channelId: Channel.Id,
     session: Brigade.Session,
     timestamp: Long
   ) extends Effect
@@ -175,12 +175,12 @@ object Event {
   /**
    * Prepends to the persistent history of the specified channel.
    *
-   * @param id        The ID of the channel to prepend to the history of.
+   * @param channelId The ID of the channel to prepend to the history of.
    * @param teams     The team set to prepend to the channel's history.
    * @param timestamp The instant that this event occurred.
    */
   case class PrependToHistory(
-    id: Channel.Id,
+    channelId: Channel.Id,
     teams: Vector[Team],
     timestamp: Long
   ) extends Effect
