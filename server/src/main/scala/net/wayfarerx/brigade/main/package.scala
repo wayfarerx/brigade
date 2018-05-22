@@ -1,5 +1,5 @@
 /*
- * Tracker.scala
+ * package.scala
  *
  * Copyright 2018 wayfarerx <x@wayfarerx.net> (@thewayfarerx)
  *
@@ -17,16 +17,13 @@
  */
 
 package net.wayfarerx.brigade
-package main
 
-import sx.blah.discord.handle.obj.IChannel
+/**
+ * Global definitions for the main package.
+ */
+package object main {
 
-final class Tracker(channel: IChannel) {
-
-}
-
-object Tracker {
-
-
+  /** The number of bits to use when sharding channels. */
+  def ChannelShardBits: Int = 3
 
 }

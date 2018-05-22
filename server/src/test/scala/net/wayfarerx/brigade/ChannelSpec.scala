@@ -65,7 +65,7 @@ class ChannelSpec extends FlatSpec with Matchers {
     outgoing.expectMessage(Event.LoadMessages(id, 0, tester.selfInbox.ref, 1L))
     outgoing.hasMessages shouldBe false
     // Start it as disabled.
-    tester.run(Event.MessagesLoaded(None, Vector(), 2L))
+    tester.run(Event.MessagesLoaded(Event.Configure(Vector(), 2L), Vector(), 2L))
     outgoing.hasMessages shouldBe false
     // Enable the channel.
     tester.run(Event.Configure(Vector(Message(cfgMsgId, bob, "!brigade")), 3L))
@@ -82,14 +82,14 @@ class ChannelSpec extends FlatSpec with Matchers {
     tester.run(Event.HistoryLoaded(History(Vector()), 1L))
     outgoing.hasMessages shouldBe false
     // Finish opening the roster.
-    tester.run(Event.TeamsPrepared(teamsMsgId, 9L))
-    outgoing.expectMessage(Event.SaveSession(id, Brigade.Active(bob, openMsgId, teamsMsgId, slots, Ledger(
+    tester.run(Event.TeamsPrepared(Some(teamsMsgId), 9L))
+    outgoing.expectMessage(Event.SaveSession(id, Brigade.Active(bob, openMsgId, Some(teamsMsgId), slots, Ledger(
       Ledger.Entry(openMsgId, bob, Command.Assign(bob, tank)),
       Ledger.Entry(4, sue, Command.Volunteer(sue, healer)),
       Ledger.Entry(5, jim, Command.Volunteer(jim, dps)),
       Ledger.Entry(6, kim, Command.Volunteer(kim, dps), Command.Volunteer(kim, tank))
     ), 9L), 9L))
-    outgoing.expectMessage(Event.PostReplies(id, Vector(Reply.UpdateTeams(teamsMsgId, slots, Vector(initialTeam))), 9L))
+    outgoing.expectMessage(Event.PostReplies(id, Vector(Reply.UpdateTeams(teamsMsgId, Vector(initialTeam))), 9L))
     outgoing.hasMessages shouldBe false
     // Reconfigure the brigade to require a history.
     tester.run(Event.Configure(Vector(Message(cfgMsgId, bob, "!brigade", "!cycle")), 10L))
@@ -100,14 +100,14 @@ class ChannelSpec extends FlatSpec with Matchers {
     outgoing.hasMessages shouldBe false
     // Finish reconfiguring.
     tester.run(Event.HistoryLoaded(History(Vector(Vector(initialTeam), Vector(initialTeam))), 12L))
-    outgoing.expectMessage(Event.SaveSession(id, Brigade.Active(bob, openMsgId, teamsMsgId, slots, Ledger(
+    outgoing.expectMessage(Event.SaveSession(id, Brigade.Active(bob, openMsgId, Some(teamsMsgId), slots, Ledger(
       Ledger.Entry(openMsgId, bob, Command.Assign(bob, tank)),
       Ledger.Entry(4, sue, Command.Volunteer(sue, healer)),
       Ledger.Entry(5, jim, Command.Volunteer(jim, dps)),
       Ledger.Entry(6, kim, Command.Volunteer(kim, dps), Command.Volunteer(kim, tank)),
       Ledger.Entry(7, sam, Command.Volunteer(sam, healer))
     ), 12L), 12L))
-    outgoing.expectMessage(Event.PostReplies(id, Vector(Reply.UpdateTeams(teamsMsgId, slots, Vector(
+    outgoing.expectMessage(Event.PostReplies(id, Vector(Reply.UpdateTeams(teamsMsgId, Vector(
       Team(ListMap(tank -> Vector(bob), healer -> Vector(sam), dps -> Vector(jim, kim))),
       Team(ListMap(tank -> Vector(), healer -> Vector(sue), dps -> Vector()))
     ))), 12L))

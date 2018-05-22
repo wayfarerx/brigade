@@ -18,12 +18,10 @@
 
 package net.wayfarerx.brigade
 
-import scala.collection.immutable.ListMap
-
 /**
  * Base type for replies produced when sending events to a brigade.
  */
-trait Reply
+sealed trait Reply
 
 /**
  * Definitions of the supported replies.
@@ -46,7 +44,7 @@ object Reply {
       case (status@Status(_, _, _), index) => status -> index
     }.groupBy(_._1.user).values.map(_.last).toVector
     val lastTeam = indexed.collect {
-      case item@(UpdateTeams(_, _, _), _) => item
+      case item@(UpdateTeams(_, _), _) => item
       case item@(FinalizeTeams(_, _), _) => item
       case item@(AbandonTeams(_), _) => item
     }.lastOption.toVector
@@ -68,13 +66,41 @@ object Reply {
   case class Status(user: User, assigned: Vector[Role], volunteered: Vector[Role]) extends Reply
 
   /**
+   * Base type for replies that report the current teams.
+   */
+  sealed trait TeamsChanged extends Reply {
+
+    /** Returns the ID of the display message to update. */
+    def teamsMsgId: Message.Id
+
+    /** Returns the teams that have been assembled for the brigade. */
+    def teams: Vector[Team]
+
+  }
+
+  /**
+   * Extractor for replies that change the published brigade.
+   */
+  object TeamsChanged {
+
+    /**
+     * Extracts the specified reply.
+     *
+     * @param reply The reply to extract.
+     * @return The contents of the specified reply.
+     */
+    def unapply(reply: TeamsChanged): Option[(Message.Id, Vector[Team])] =
+      Some(reply.teamsMsgId -> reply.teams)
+
+  }
+
+  /**
    * A reply that updates the listing of teams in a brigade.
    *
    * @param teamsMsgId The ID of the display message to update.
-   * @param slots      The slots available in a team.
    * @param teams      The teams that have been assembled for the brigade.
    */
-  case class UpdateTeams(teamsMsgId: Message.Id, slots: ListMap[Role, Int], teams: Vector[Team]) extends Reply
+  case class UpdateTeams(teamsMsgId: Message.Id, teams: Vector[Team]) extends TeamsChanged
 
   /**
    * A reply that finalizes the listing of teams in a brigade.
@@ -82,7 +108,7 @@ object Reply {
    * @param teamsMsgId The ID of the display message to update.
    * @param teams      The teams that have been assembled for the brigade.
    */
-  case class FinalizeTeams(teamsMsgId: Message.Id, teams: Vector[Team]) extends Reply
+  case class FinalizeTeams(teamsMsgId: Message.Id, teams: Vector[Team]) extends TeamsChanged
 
   /**
    * A reply that abandons the listing of teams in a brigade.

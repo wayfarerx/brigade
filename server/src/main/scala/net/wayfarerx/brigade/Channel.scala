@@ -49,7 +49,7 @@ final class Channel private(id: Channel.Id, owner: User, outgoing: ActorRef[Even
         ctx,
         brigade,
         brigade,
-        configuration.map(next :+ _).getOrElse(next) :+ (submissions: _*),
+        next :+ configuration :+ (submissions: _*),
         Vector()
       )
   }
@@ -267,21 +267,22 @@ object Channel {
   /**
    * Continues applying a submit event after a teams message ID is prepared.
    *
-   * @param brigade   The current brigade.
-   * @param event     The event to apply.
-   * @param commands  The commands contained in the event.
-   * @param timestamp The instant that this event occurred.
+   * @param brigade    The current brigade.
+   * @param event      The event to apply.
+   * @param commands   The commands contained in the event.
+   * @param teamsMsgId The ID of the team display message if one exists.
+   * @param timestamp  The instant that this event occurred.
    * @return The outcome of applying the event.
    */
   private def continueSubmit(
     brigade: Brigade,
     event: Event.Submit,
     commands: Vector[Command],
-    teamsMsgId: Message.Id,
+    teamsMsgId: Option[Message.Id],
     timestamp: Long
   ): (Brigade, Vector[Reply]) = {
     brigade.submit(event.message.author, event.message.id, commands map {
-      case cmd@Command.Open(_, _) => cmd.copy(teamsMsgId = Some(teamsMsgId))
+      case cmd@Command.Open(_, _) => cmd.copy(teamsMsgId = teamsMsgId)
       case cmd => cmd
     }, timestamp)
   }
@@ -319,7 +320,7 @@ object Channel {
    * @param configuration The buffered configure event.
    * @param submissions   The buffered submit events.
    */
-  case class Buffer (configuration: Option[Event.Configure], submissions: Vector[Event.Submit]) {
+  case class Buffer(configuration: Option[Event.Configure], submissions: Vector[Event.Submit]) {
 
     /**
      * Modifies the buffered configure signal.

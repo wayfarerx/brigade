@@ -53,10 +53,11 @@ case class Brigade(
         Vector()
     case s@Active(organizer, _, teamsMsgId, slots, _, _) if organizers(organizer) =>
       Brigade(organizers, configuration, s.copy(lastModified = timestamp)) ->
-        Vector(Reply.UpdateTeams(teamsMsgId, slots, s.currentTeams(organizers, configuration)))
+        teamsMsgId.map(t => Vector(Reply.UpdateTeams(t, s.currentTeams(organizers, configuration))))
+          .getOrElse(Vector())
     case Active(_, _, teamsMsgId, _, _, _) =>
       Brigade(organizers, configuration, Inactive(timestamp)) ->
-        Vector(Reply.AbandonTeams(teamsMsgId))
+        teamsMsgId.map(t => Vector(Reply.AbandonTeams(t))).getOrElse(Vector())
   }
 
   /**
@@ -185,9 +186,9 @@ object Brigade {
       commands: Vector[Command],
       timestamp: Long
     ): (Session, Vector[Reply]) = {
-      val (prefix, openAndRemainder) = scan(commands) { case cmd@Command.Open(_, Some(_)) if organizers(author) => cmd }
+      val (prefix, openAndRemainder) = scan(commands) { case cmd@Command.Open(_, _) if organizers(author) => cmd }
       val (result, replies) = openAndRemainder collect {
-        case (Command.Open(slots, Some(teamsMsgId)), remainder) =>
+        case (Command.Open(slots, teamsMsgId), remainder) =>
           val (result, replies) = Active(
             author,
             messageId,
@@ -203,7 +204,7 @@ object Brigade {
             remainder,
             Math.max(lastModified, timestamp)
           )
-          result -> (Reply.UpdateTeams(teamsMsgId, slots, Vector(Team(ListMap()))) +: replies)
+          result -> teamsMsgId.map(Reply.UpdateTeams(_, Vector(Team(ListMap()))) +: replies).getOrElse(replies)
       } getOrElse this -> Vector()
       result -> (if (organizers.nonEmpty && prefix.contains(Command.Help)) Reply.Usage +: replies else replies)
     }
@@ -223,7 +224,7 @@ object Brigade {
   case class Active(
     organizer: User,
     openMsgId: Message.Id,
-    teamsMsgId: Message.Id,
+    teamsMsgId: Option[Message.Id],
     slots: ListMap[Role, Int],
     ledger: Ledger,
     lastModified: Long
@@ -239,9 +240,9 @@ object Brigade {
       timestamp: Long
     ): (Session, Vector[Reply]) =
       if (messageId == openMsgId) {
-        val (_, openAndRemainder) = scan(commands) { case cmd@Command.Open(_, Some(_)) if organizers(author) => cmd }
+        val (_, openAndRemainder) = scan(commands) { case cmd@Command.Open(_, _) if organizers(author) => cmd }
         openAndRemainder collect {
-          case (Command.Open(newSlots, Some(newTeamsMsgId)), remainder) =>
+          case (Command.Open(newSlots, newTeamsMsgId), remainder) =>
             Active(
               author,
               messageId,
@@ -257,7 +258,8 @@ object Brigade {
               remainder,
               Math.max(lastModified, timestamp)
             )
-        } getOrElse Inactive(Math.max(lastModified, timestamp)) -> Vector(Reply.AbandonTeams(teamsMsgId))
+        } getOrElse Inactive(Math.max(lastModified, timestamp)) ->
+          teamsMsgId.map(t => Vector(Reply.AbandonTeams(t))).getOrElse(Vector())
       } else {
         continue(
           organizers,
@@ -315,18 +317,22 @@ object Brigade {
       terminal match {
         // Abort the brigade.
         case Some((Command.Abort, _)) =>
-          Inactive(Math.max(lastModified, timestamp)) -> (replies :+ Reply.AbandonTeams(teamsMsgId))
+          Inactive(Math.max(lastModified, timestamp)) ->
+            teamsMsgId.map(replies :+ Reply.AbandonTeams(_)).getOrElse(replies)
         case notAborted =>
           val next = if (mutations.isEmpty) copy(lastModified = Math.max(lastModified, timestamp)) else
             copy(ledger = ledger :+ Ledger.Entry(messageId, author, mutations: _*),
               lastModified = Math.max(lastModified, timestamp))
           notAborted match {
             // Finalize the brigade.
-            case Some(_) => Inactive(Math.max(lastModified, timestamp)) -> (replies :+
-              Reply.FinalizeTeams(teamsMsgId, next.currentTeams(organizers, configuration, finalize = true)))
+            case Some(_) => Inactive(Math.max(lastModified, timestamp)) ->
+              teamsMsgId.map(replies :+
+                Reply.FinalizeTeams(_, next.currentTeams(organizers, configuration, finalize = true)))
+                .getOrElse(replies)
             // Update the brigade.
-            case None => next -> (replies :+
-              Reply.UpdateTeams(teamsMsgId, slots, next.currentTeams(organizers, configuration)))
+            case None => next ->
+              teamsMsgId.map(replies :+ Reply.UpdateTeams(_, next.currentTeams(organizers, configuration)))
+                .getOrElse(replies)
           }
       }
     }

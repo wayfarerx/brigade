@@ -1,37 +1,36 @@
 import Dependencies._
 
 lazy val common = Seq(
-
   organization := "net.wayfarerx",
   scalaVersion := "2.12.1",
-  version := "0.4.0-SNAPSHOT",
-
-  resolvers += jcenter,
-  resolvers += jitpack,
-
+  version := "0.5.0-SNAPSHOT",
   test in assembly := {}
-
 )
 
-lazy val server = (project in file("server")).
-  settings(common,
+lazy val aws = (project in file("aws")).settings(common,
+  name := "brigade-aws",
+  libraryDependencies ++= Vector(akka, commonsIO, awsS3, awsCloudWatch, scalaTest, akkaTest)
+)
 
-    name := "brigade-server",
+lazy val server = (project in file("server")).settings(common,
 
-    libraryDependencies += cats,
-    libraryDependencies += akka,
-    libraryDependencies += circe,
-    libraryDependencies += circeGeneric,
-    libraryDependencies += circeParser,
-    libraryDependencies += discord4j,
-    libraryDependencies += json4sNative,
-    libraryDependencies += awsS3,
-    libraryDependencies += logback,
+  name := "brigade-server",
 
-    libraryDependencies += akkaTest,
-    libraryDependencies += scalaTest,
+  libraryDependencies += akka,
+  libraryDependencies += discord4j,
+  libraryDependencies += circe,
+  libraryDependencies += circeGeneric,
+  libraryDependencies += circeParser,
+  libraryDependencies += circeExtras,
+  libraryDependencies += commonsIO,
+  libraryDependencies += awsS3,
+  libraryDependencies += awsCloudWatch,
+  libraryDependencies += logback,
 
-    mainClass in assembly := Some("net.wayfarerx.brigade.main.Program"),
-    assemblyJarName in assembly := "brigade.jar"
+  libraryDependencies += akkaTest,
+  libraryDependencies += scalaTest,
 
-  )
+  mainClass in assembly := Some("net.wayfarerx.brigade.main.Program"),
+  assemblyJarName in assembly := "brigade.jar"
+
+).dependsOn(aws)

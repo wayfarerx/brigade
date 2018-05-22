@@ -88,13 +88,13 @@ class BrigadeSpec extends FlatSpec with Matchers {
       (jim, Message.Id(10), Vector(Command.DropAll(jim), Command.Volunteer(jim, tank)), 10L)
     )) { (previous, submission) =>
       val (next, replies) = (previous.submit _).tupled(submission)
-      Reply.normalize(replies).collect { case reply@Reply.UpdateTeams(_, _, _) => reply }.length shouldBe 1
+      Reply.normalize(replies).collect { case reply@Reply.UpdateTeams(_, _) => reply }.length shouldBe 1
       next
     }
     brigade shouldBe Brigade(Set(bob), Configuration.Default, Brigade.Active(
       bob,
       Message.Id(1),
-      Message.Id(0),
+      Some(Message.Id(0)),
       ListMap(tank -> 1, healer -> 1, dps -> 2),
       Ledger(
         Ledger.Entry(Message.Id(2), bob, Command.Assign(bob, tank)),
@@ -131,13 +131,13 @@ class BrigadeSpec extends FlatSpec with Matchers {
       (bob, Message.Id(4), Vector(Command.Volunteer(bob, tank), Command.Volunteer(bob, dps)), 9L)
     )) { (previous, submission) =>
       val (next, replies) = (previous.submit _).tupled(submission)
-      Reply.normalize(replies).collect { case reply@Reply.UpdateTeams(_, _, _) => reply }.length shouldBe 1
+      Reply.normalize(replies).collect { case reply@Reply.UpdateTeams(_, _) => reply }.length shouldBe 1
       next
     }
     brigade shouldBe Brigade(Set(bob), Configuration.Default, Brigade.Active(
       bob,
       Message.Id(1),
-      Message.Id(0),
+      Some(Message.Id(0)),
       ListMap(tank -> 1, healer -> 1, dps -> 2),
       Ledger(
         Ledger.Entry(Message.Id(2), bob, Command.Assign(bob, tank)),
@@ -173,7 +173,7 @@ class BrigadeSpec extends FlatSpec with Matchers {
       (bob, Message.Id(4), Vector(Command.Volunteer(bob, tank), Command.Volunteer(bob, dps)), 9L)
     )) { (previous, submission) =>
       val (next, replies) = (previous.submit _).tupled(submission)
-      Reply.normalize(replies).collect { case reply@Reply.UpdateTeams(_, _, _) => reply }.length shouldBe 1
+      Reply.normalize(replies).collect { case reply@Reply.UpdateTeams(_, _) => reply }.length shouldBe 1
       next
     }.submit(
       bob,
@@ -183,7 +183,6 @@ class BrigadeSpec extends FlatSpec with Matchers {
     )
     replies shouldBe Vector(Reply.UpdateTeams(
       Message.Id(0),
-      ListMap(tank -> 1, healer -> 1, dps -> 2),
       Vector(Team(ListMap(
         tank -> Vector(jim),
         healer -> Vector(sue),
@@ -234,13 +233,13 @@ class BrigadeSpec extends FlatSpec with Matchers {
       (bob, Message.Id(2), Vector(Command.Assign(bob, tank)), 2L)
     )) { (previous, submission) =>
       val (next, replies) = (previous.submit _).tupled(submission)
-      Reply.normalize(replies).collect { case reply@Reply.UpdateTeams(_, _, _) => reply }.length shouldBe 1
+      Reply.normalize(replies).collect { case reply@Reply.UpdateTeams(_, _) => reply }.length shouldBe 1
       next
     }
     brigade shouldBe Brigade(Set(bob), Configuration.Default, Brigade.Active(
       bob,
       Message.Id(1),
-      Message.Id(0),
+      Some(Message.Id(0)),
       ListMap(tank -> 1, healer -> 1, dps -> 2),
       Ledger(
         Ledger.Entry(Message.Id(2), bob, Command.Assign(bob, tank))
@@ -251,7 +250,7 @@ class BrigadeSpec extends FlatSpec with Matchers {
     brigade2 shouldBe Brigade(Set(bob, sue), Configuration.Default, Brigade.Active(
       bob,
       Message.Id(1),
-      Message.Id(0),
+      Some(Message.Id(0)),
       ListMap(tank -> 1, healer -> 1, dps -> 2),
       Ledger(
         Ledger.Entry(Message.Id(2), bob, Command.Assign(bob, tank))
@@ -260,7 +259,6 @@ class BrigadeSpec extends FlatSpec with Matchers {
     ))
     replies2 shouldBe Vector(Reply.UpdateTeams(
       Message.Id(0),
-      ListMap(tank -> 1, healer -> 1, dps -> 2),
       Vector(Team(ListMap(tank -> Vector(bob), healer -> Vector(), dps -> Vector())))
     ))
     val (brigade3, replies3) = brigade2.configure(Set(sue), Configuration.Default, 4L)
@@ -284,7 +282,6 @@ class BrigadeSpec extends FlatSpec with Matchers {
     Reply.normalize(firstReplies) shouldBe Vector(
       Reply.UpdateTeams(
         Message.Id(0),
-        ListMap(tank -> 1, healer -> 1, dps -> 2),
         Vector(Team(ListMap(
           tank -> Vector(bob),
           healer -> Vector(sue),
@@ -303,7 +300,6 @@ class BrigadeSpec extends FlatSpec with Matchers {
     Reply.normalize(lastReplies) shouldBe Vector(
       Reply.UpdateTeams(
         Message.Id(0),
-        ListMap(tank -> 1, healer -> 1, dps -> 2),
         Vector(Team(ListMap(
           tank -> Vector(jim),
           healer -> Vector(sue),

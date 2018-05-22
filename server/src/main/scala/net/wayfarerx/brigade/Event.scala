@@ -295,7 +295,7 @@ object Event {
    * @param timestamp     The instant that this event occurred.
    */
   case class MessagesLoaded(
-    configuration: Option[Configure],
+    configuration: Configure,
     submissions: Vector[Submit],
     timestamp: Long
   ) extends Response
@@ -314,11 +314,11 @@ object Event {
   /**
    * Notifies a channel that a team display message is available.
    *
-   * @param messageId The ID of the team display message.
+   * @param messageId The ID of the team display message if one was created.
    * @param timestamp The instant that this event occurred.
    */
   case class TeamsPrepared(
-    messageId: Message.Id,
+    messageId: Option[Message.Id],
     timestamp: Long
   ) extends Response
 

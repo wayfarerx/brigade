@@ -19,106 +19,74 @@
 package net.wayfarerx.brigade
 package main
 
-import java.io.{BufferedReader, InputStreamReader}
+import java.nio.charset.Charset
 
 import collection.JavaConverters._
 import concurrent.Await
 import concurrent.duration._
 
-import akka.actor.typed.{ActorSystem, PostStop}
+import akka.actor.typed.{ActorSystem, Behavior}
 import akka.actor.typed.scaladsl._
 
-import sx.blah.discord.api.{ClientBuilder, IDiscordClient}
-import sx.blah.discord.api.events.IListener
+import org.apache.commons.io.IOUtils
+
 
 /**
  * Main entry point for the bot.
  */
 object Program {
-/*
+
+  private val S3Pattern = """s3\:\/\/([a-zA-Z0-9_\-]+)\/([a-zA-Z0-9_\-\/]+)""".r
+
   /**
    * Main entry point for the bot.
    *
    * @param args The command-line arguments.
    */
   def main(args: Array[String]): Unit =
-    if (args.length != 0 && args.length != 2) {
-      println("Usage: brigade (S3_BUCKET S3_PATH)")
-      println("  The Discord token must be provided on the system input stream i.e. `cat token.txt | brigade ...`")
-      println("  S3_BUCKET     The S3 bucket to use for storage (only if using S3).")
-      println("  S3_PATH       The S3 key prefix to use for storage (only if using S3).")
-      System.exit(1)
+    if (args.length != 1 || args.exists(a => a.equalsIgnoreCase("-h") || a.equalsIgnoreCase("--help"))) {
+      println("Usage: java -jar brigade.jar [<DIRECTORY> | s3://<S3_BUCKET>/<S3_PREFIX>]")
+      println("  DIRECTORY The local directory to store data in, defaults to the current directory.")
+      println("  S3_BUCKET The S3 bucket to use for storage.")
+      println("  S3_PREFIX The S3 key prefix to use for storage.")
+      System.exit(-1)
     } else {
-      println("boot")
       var result = 1
       try {
-        lazy val system = ActorSystem(
-          controller(if (args.isEmpty) None else Some(args(0) -> normalizeS3Path(args(1)))),
-          "brigade"
-        )
+        val system = ActorSystem(behavior, "brigade")
         sys.runtime.addShutdownHook(new Thread() {
-          override def run(): Unit = Await.result(system.terminate(), 10.seconds)
+          override def run(): Unit = Await.result(system.terminate(), 2.minutes)
         })
-        system ! sys.env.getOrElse("DISCORD_TOKEN", new BufferedReader(new InputStreamReader(System.in)).readLine())
+        val token = sys.env.getOrElse("DISCORD_TOKEN",
+          IOUtils.readLines(System.in, Charset.defaultCharset).asScala.mkString("\n")).trim
+        val (storage, reporting) = (???, ???) /*args(0) match {
+          case S3Pattern(bucket, prefix) =>
+            Storage.Driver.Cloud(AmazonS3ClientBuilder.defaultClient, bucket, prefix) ->
+              Reporting.Driver.Cloud(AmazonCloudWatchClientBuilder.defaultClient)
+          case local =>
+            Storage.Driver.Default(Paths.get(local)) -> Reporting.Driver.Default
+        }*/
+        system ! Initialize(token, storage, reporting)
         result = 0
       } catch {
         case t: Throwable => t.printStackTrace()
       } finally if (result != 0) System.exit(result)
     }
 
-  /**
-   * Trims all leading and trailing slashes on S3 paths and replaces back slashes with forward slashes.
-   *
-   * @param path The path to trim.
-   * @return The trimmed path.
-   */
-  @annotation.tailrec
-  private def normalizeS3Path(path: CharSequence): String =
-    if (path.length == 0) "" else path charAt 0 match {
-      case '/' | '\\' => normalizeS3Path(path.subSequence(1, path.length()))
-      case _ => path charAt path.length - 1 match {
-        case '/' | '\\' => normalizeS3Path(path.subSequence(0, path.length - 1))
-        case _ => path.toString.replace('\\', '/')
-      }
-    }
+  private def behavior: Behavior[Action] = Behaviors.receive[Action] { (_, act) =>
 
-  private def controller(storage: Option[(String, String)]) = Behaviors.immutable[String] { (ctx, token) =>
-    println("startup")
-    val listeners = Vector[IListener[_]](
-      /*OnKickedFrom(ctx.self),
-      OnRemovedFrom(ctx.self),
-      OnReceived(ctx.self),
-      OnUpdated(ctx.self),
-      OnDeleted(ctx.self),
-      OnPinned(ctx.self),
-      OnUnpinned(ctx.self)*/
-    )
-    var success = false
-    val discordClient = new ClientBuilder().setDaemon(true).withToken(token).login()
-    try {
-      for {
-        guild <- discordClient.getGuilds.asScala
-        channel <- guild.getChannels.asScala
-      } yield {
-        val messages = channel.getPinnedMessages.asScala filter (_.getAuthor.getLongID == guild.getOwnerLongID)
-
-        ???
-      }
-      val dispatcher = discordClient.getDispatcher
-      listeners foreach dispatcher.registerListener
-      success = true
-    } finally if (!success) discordClient.logout()
-
-    Behaviors.immutable[String] { (_, _) =>
-      Behaviors.stopped {
-        Behaviors.onSignal {
-          case (_, PostStop) =>
-            println("shutdown")
-            // TODO unregister
-            Behaviors.same
-        }
-      }
-    }
+    ???
   }
-*/
+
+  /**
+   * Base class for Discord messages.
+   */
+  sealed trait Action
+
+  case class Initialize(
+    discordToken: String,
+    storageDriver: Storage.Driver,
+    reportingDriver: Reporting.Driver
+  ) extends Action
+
 }

@@ -17,6 +17,6 @@ cat > brigade <<- EOM
 cd
 aws s3 cp s3://brigade.wayfarerx.net/token.txt .
 aws s3 cp s3://brigade.wayfarerx.net/brigade.jar .
-cat token.txt | java -jar brigade.jar brigade.wayfarerx.net guilds
+cat token.txt | java -jar brigade.jar s3://brigade.wayfarerx.net/guilds
 EOM
 chmod +x brigade
