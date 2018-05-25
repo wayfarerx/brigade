@@ -9,7 +9,7 @@ lazy val common = Seq(
 
 lazy val aws = (project in file("aws")).settings(common,
   name := "brigade-aws",
-  libraryDependencies ++= Vector(akka, commonsIO, awsS3, awsCloudWatch, scalaTest, akkaTest)
+  libraryDependencies ++= Vector(akka, awsS3, awsCloudWatch, scalaTest, akkaTest)
 )
 
 lazy val server = (project in file("server")).settings(common,
@@ -18,13 +18,11 @@ lazy val server = (project in file("server")).settings(common,
 
   libraryDependencies += akka,
   libraryDependencies += discord4j,
+  libraryDependencies += commonsIO,
   libraryDependencies += circe,
   libraryDependencies += circeGeneric,
   libraryDependencies += circeParser,
   libraryDependencies += circeExtras,
-  libraryDependencies += commonsIO,
-  libraryDependencies += awsS3,
-  libraryDependencies += awsCloudWatch,
   libraryDependencies += logback,
 
   libraryDependencies += akkaTest,

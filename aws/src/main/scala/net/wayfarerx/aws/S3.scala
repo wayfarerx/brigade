@@ -81,13 +81,15 @@ object S3 {
    * A lists object event.
    *
    * @param request  The list objects request.
-   * @param respond  The list objects response handler.
-   * @param deadline The deadline that this event must be handled by.
+   * @param respond  The list objects response handler (defaults to no effect).
+   * @param backoff  The initial amount of time to wait between retries (defaults to 1 second).
+   * @param deadline The deadline that this event must be handled by (defaults to 15 seconds from now).
    */
   case class ListObjects(
     request: ListObjectsRequest,
     respond: Try[ListObjectsResponse] => Unit = _ => (),
-    deadline: Deadline = 1.minute.fromNow
+    backoff: FiniteDuration = 1.second,
+    deadline: Deadline = 15.seconds.fromNow
   ) extends Event with AwsEvent {
     override type Request = ListObjectsRequest
     override type Response = ListObjectsResponse
@@ -97,29 +99,33 @@ object S3 {
    * A get object event.
    *
    * @param request  The get object request.
-   * @param respond  The get object response handler.
-   * @param deadline The deadline that this event must be handled by.
+   * @param respond  The get object response handler (defaults to no effect).
+   * @param backoff  The initial amount of time to wait between retries (defaults to 1 second).
+   * @param deadline The deadline that this event must be handled by (defaults to 15 seconds from now).
    */
   case class GetObject(
     request: GetObjectRequest,
     respond: Try[(GetObjectResponse, Array[Byte])] => Unit = _ => (),
-    deadline: Deadline = 1.minute.fromNow
+    backoff: FiniteDuration = 1.second,
+    deadline: Deadline = 15.seconds.fromNow
   ) extends Event with AwsEvent {
     override type Request = GetObjectRequest
     override type Response = (GetObjectResponse, Array[Byte])
   }
 
   /**
-   * A get object event.
+   * A put object event.
    *
-   * @param request  The get object request.
-   * @param respond  The get object response handler.
-   * @param deadline The deadline that this event must be handled by.
+   * @param request  The put object request.
+   * @param respond  The put object response handler (defaults to no effect).
+   * @param backoff  The initial amount of time to wait between retries (defaults to 1 second).
+   * @param deadline The deadline that this event must be handled by (defaults to 15 seconds from now).
    */
   case class PutObject(
     request: (PutObjectRequest, Array[Byte]),
     respond: Try[PutObjectResponse] => Unit = _ => (),
-    deadline: Deadline = 1.minute.fromNow
+    backoff: FiniteDuration = 1.second,
+    deadline: Deadline = 15.seconds.fromNow
   ) extends Event with AwsEvent {
     override type Request = (PutObjectRequest, Array[Byte])
     override type Response = PutObjectResponse

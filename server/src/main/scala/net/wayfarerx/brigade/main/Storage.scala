@@ -24,20 +24,23 @@ import java.nio.file.{Files, Path, Paths}
 
 import collection.JavaConverters._
 import collection.immutable.ListMap
-import concurrent.duration._
 import util.{Failure, Success, Try}
-import akka.actor.typed.{ActorRef, Behavior, PostStop}
+
+import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl._
+
 import io.circe._
 import io.circe.generic.auto._
 import io.circe.generic.extras.{Configuration => Config}
 import io.circe.syntax._
+
 import software.amazon.awssdk.services.s3.model.{
   GetObjectRequest,
   ListObjectsRequest,
   NoSuchKeyException,
   PutObjectRequest
 }
+
 import net.wayfarerx.aws.S3
 
 /**
@@ -49,9 +52,6 @@ import net.wayfarerx.aws.S3
 final class Storage private(driver: Storage.Driver, reporting: ActorRef[Reporting.Action]) {
 
   import Storage._
-
-  /** The sharded thread pool that does the actual IO work. */
-  private val shards = Shards[Channel.Id](ChannelShardBits, Retry(maximumBackOff = 40.seconds), 2.minutes)
 
   /** The behavior that handles storage actions. */
   private def behavior: Behavior[Action] = Behaviors.receive[Action] { (ctx, act) =>
@@ -123,10 +123,6 @@ final class Storage private(driver: Storage.Driver, reporting: ActorRef[Reportin
 
     }
     Behaviors.same
-  } receiveSignal {
-    case (_, PostStop) ⇒
-      shards.dispose()
-      Behaviors.same
   }
 
 }

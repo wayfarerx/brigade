@@ -44,7 +44,7 @@ final class CloudWatch private(client: CloudWatchAsyncClient) {
       implicit val scheduler: Scheduler = ctx.system.scheduler
       implicit val executionContext: ExecutionContext = ctx.system.executionContext
       evt match {
-        case event@PutMetricData(_, _, _) => event(client.putMetricData)
+        case event: PutMetricData => event(client.putMetricData)
       }
       Behaviors.same
     }
@@ -74,13 +74,15 @@ object CloudWatch {
    * A put metric data event.
    *
    * @param request  The put metric data request.
-   * @param respond  The put metric data response handler.
-   * @param deadline The deadline that this event must be handled by.
+   * @param respond  The put metric data response handler (defaults to no effect).
+   * @param backoff  The initial amount of time to wait between retries (defaults to 1 second).
+   * @param deadline The deadline that this event must be handled by (defaults to 15 seconds from now).
    */
   case class PutMetricData(
     request: PutMetricDataRequest,
     respond: Try[PutMetricDataResponse] => Unit = _ => (),
-    deadline: Deadline = 1.minute.fromNow
+    backoff: FiniteDuration = 1.second,
+    deadline: Deadline = 15.seconds.fromNow
   ) extends Event with AwsEvent {
     override type Request = PutMetricDataRequest
     override type Response = PutMetricDataResponse

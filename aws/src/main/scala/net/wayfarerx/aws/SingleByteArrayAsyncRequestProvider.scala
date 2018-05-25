@@ -28,7 +28,7 @@ import software.amazon.awssdk.core.async.AsyncRequestProvider
  *
  * @param bytes The byte array to derive an async request provider from.
  */
-final class SingleByteArrayAsyncRequestProvider(bytes: Array[Byte]) extends AsyncRequestProvider {
+private[aws] final class SingleByteArrayAsyncRequestProvider(bytes: Array[Byte]) extends AsyncRequestProvider {
 
   /* Return the length of the array. */
   override def contentLength: Long = bytes.length

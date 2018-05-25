@@ -223,7 +223,8 @@ object Reporting {
                   case (n, v) => Dimension.builder().name(n).value(v).build()
                 } :+ Dimension.builder().name("channel").value(a.channelId.value.toString).build()).asJavaCollection
                 ).build()
-            ).build()
+            ).build(),
+          _.failed.foreach(_.printStackTrace)
         )
 
     }
