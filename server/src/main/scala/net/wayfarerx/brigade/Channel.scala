@@ -43,6 +43,15 @@ final class Channel private(id: Channel.Id, owner: User, outgoing: ActorRef[Even
     session: Brigade.Session,
     buffer: Buffer
   ): Behavior[Event.Incoming] = buffer.buffering {
+    case (ctx, next, Event.MessagesLoaded(Event.Configure(Vector(), _), _, _)) if !session.isActive =>
+      val brigade = Brigade(Set(), Configuration.Default, session)
+      drain(
+        ctx,
+        brigade,
+        brigade,
+        next,
+        Vector()
+      )
     case (ctx, next, Event.MessagesLoaded(configuration, submissions, _)) =>
       val brigade = Brigade(Set(), Configuration.Default, session)
       drain(
@@ -168,7 +177,7 @@ final class Channel private(id: Channel.Id, owner: User, outgoing: ActorRef[Even
     if (starting.session.lastModified != result.session.lastModified)
       outgoing ! Event.SaveSession(id, result.session, timestamp)
     normalized collect {
-      case Reply.FinalizeTeams(_, teams) => Event.PrependToHistory(id, teams, timestamp)
+      case Reply.FinalizeTeams(_, _, teams) => Event.PrependToHistory(id, teams, timestamp)
     } foreach (outgoing ! _)
     if (normalized.nonEmpty) outgoing ! Event.PostReplies(id, normalized, timestamp)
   }

@@ -53,7 +53,7 @@ case class Brigade(
         Vector()
     case s@Active(organizer, _, teamsMsgId, slots, _, _) if organizers(organizer) =>
       Brigade(organizers, configuration, s.copy(lastModified = timestamp)) ->
-        teamsMsgId.map(t => Vector(Reply.UpdateTeams(t, s.currentTeams(organizers, configuration))))
+        teamsMsgId.map(t => Vector(Reply.UpdateTeams(slots, t, s.currentTeams(organizers, configuration))))
           .getOrElse(Vector())
     case Active(_, _, teamsMsgId, _, _, _) =>
       Brigade(organizers, configuration, Inactive(timestamp)) ->
@@ -77,7 +77,7 @@ case class Brigade(
   ): (Brigade, Vector[Reply]) = {
     val (nextSession, replies) = session(organizers, configuration, author, messageId, commands, timestamp)
     val nextConfiguration = replies.collect {
-      case Reply.FinalizeTeams(_, teams) => teams
+      case Reply.FinalizeTeams(_, _, teams) => teams
     }.headOption map { teams =>
       configuration match {
         case Configuration.Cycle(history) => Configuration.Cycle(History(teams +: history.teams.init))
@@ -128,6 +128,9 @@ object Brigade {
    */
   sealed trait Session {
 
+    /** True if this session is active. */
+    def isActive: Boolean
+
     /** The last time this session was modified. */
     def lastModified: Long
 
@@ -177,6 +180,9 @@ object Brigade {
     lastModified: Long
   ) extends Session {
 
+    /* Always false. */
+    override def isActive: Boolean = false
+
     /* Apply the specified commands. */
     override private[Brigade] def apply(
       organizers: Set[User],
@@ -204,7 +210,7 @@ object Brigade {
             remainder,
             Math.max(lastModified, timestamp)
           )
-          result -> teamsMsgId.map(Reply.UpdateTeams(_, Vector(Team(ListMap()))) +: replies).getOrElse(replies)
+          result -> teamsMsgId.map(Reply.UpdateTeams(slots, _, Vector(Team(ListMap()))) +: replies).getOrElse(replies)
       } getOrElse this -> Vector()
       result -> (if (organizers.nonEmpty && prefix.contains(Command.Help)) Reply.Usage +: replies else replies)
     }
@@ -229,6 +235,9 @@ object Brigade {
     ledger: Ledger,
     lastModified: Long
   ) extends Session {
+
+    /* Always true. */
+    override def isActive: Boolean = true
 
     /* Apply the specified commands. */
     override private[Brigade] def apply(
@@ -293,7 +302,6 @@ object Brigade {
       val (prefix, terminal) = scan(commands) { case cmd@Command.Terminal() if organizers(author) => cmd }
       val (mutations, replies) = ((Vector[Command.Mutation](), Vector[Reply]()) /: prefix) { (previous, command) =>
         val (_mutations, _replies) = previous
-        println(command)
         command match {
           // Display usage for help commands.
           case Command.Help =>
@@ -327,11 +335,11 @@ object Brigade {
             // Finalize the brigade.
             case Some(_) => Inactive(Math.max(lastModified, timestamp)) ->
               teamsMsgId.map(replies :+
-                Reply.FinalizeTeams(_, next.currentTeams(organizers, configuration, finalize = true)))
+                Reply.FinalizeTeams(slots, _, next.currentTeams(organizers, configuration, finalize = true)))
                 .getOrElse(replies)
             // Update the brigade.
             case None => next ->
-              teamsMsgId.map(replies :+ Reply.UpdateTeams(_, next.currentTeams(organizers, configuration)))
+              teamsMsgId.map(replies :+ Reply.UpdateTeams(slots, _, next.currentTeams(organizers, configuration)))
                 .getOrElse(replies)
           }
       }

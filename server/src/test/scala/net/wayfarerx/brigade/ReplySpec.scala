@@ -67,11 +67,12 @@ class ReplySpec extends FlatSpec with Matchers {
   }
 
   it should "normalize away all but the last team reply" in {
+    val slots = ListMap(tank -> 1, healer -> 1, dps -> 2)
     Reply.normalize(Vector(
       Reply.Status(bob, Vector(tank), Vector(dps)),
-      Reply.UpdateTeams(Message.Id(0), Vector(Team())),
+      Reply.UpdateTeams(slots, Message.Id(0), Vector(Team())),
       Reply.Status(sue, Vector(healer), Vector(dps)),
-      Reply.FinalizeTeams(Message.Id(0), Vector(Team())),
+      Reply.FinalizeTeams(slots, Message.Id(0), Vector(Team())),
       Reply.Usage,
       Reply.AbandonTeams(Message.Id(0))
     )) shouldBe Vector(

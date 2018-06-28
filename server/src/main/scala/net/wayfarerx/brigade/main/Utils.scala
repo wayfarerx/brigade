@@ -33,28 +33,31 @@ object Utils {
    * @param message The Discord message to transform.
    * @return The resulting Brigade message.
    */
-  def transformMessage(message: IMessage): Message = {
-    val tokens = new MessageTokenizer(message)
+  def transformMessage(message: IMessage): Message =
+    if (message.getContent.isEmpty)
+      Message(Message.Id(message.getLongID), User(message.getAuthor.getLongID))
+    else {
+      val tokens = new MessageTokenizer(message)
 
-    @annotation.tailrec
-    def translate(prefix: Vector[Message.Token]): Vector[Message.Token] = if (!tokens.hasNext) prefix else {
-      if (tokens.hasNextEmoji) {
-        tokens.nextEmoji()
-        translate(prefix)
-      } else if (tokens.hasNextInvite) {
-        tokens.nextInvite()
-        translate(prefix)
-      } else if (tokens.hasNextMention) {
-        tokens.nextMention() match {
-          case user: MessageTokenizer.UserMentionToken =>
-            translate(prefix :+ Message.Mention(User(user.getMentionObject.getLongID)))
-          case _ =>
-            translate(prefix)
-        }
-      } else translate(prefix :+ Message.Word(tokens.nextWord().getContent))
+      @annotation.tailrec
+      def translate(prefix: Vector[Message.Token]): Vector[Message.Token] = if (!tokens.hasNext) prefix else {
+        if (tokens.hasNextEmoji) {
+          tokens.nextEmoji()
+          translate(prefix)
+        } else if (tokens.hasNextInvite) {
+          tokens.nextInvite()
+          translate(prefix)
+        } else if (tokens.hasNextMention) {
+          tokens.nextMention() match {
+            case user: MessageTokenizer.UserMentionToken =>
+              translate(prefix :+ Message.Mention(User(user.getMentionObject.getLongID)))
+            case _ =>
+              translate(prefix)
+          }
+        } else translate(prefix :+ Message.Word(tokens.nextWord().getContent))
+      }
+
+      Message(Message.Id(message.getLongID), User(message.getAuthor.getLongID), translate(Vector()): _*)
     }
-
-    Message(Message.Id(message.getLongID), User(message.getAuthor.getLongID), translate(Vector()): _*)
-  }
 
 }

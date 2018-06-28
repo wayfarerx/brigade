@@ -51,37 +51,37 @@ final class Reporting private(driver: Reporting.Driver) {
 object Reporting {
 
   /** Factory for reporting successfully posting replies. */
-  lazy val PostedReplies: Action.Success = Action.Success("post", " replies", "discord")
+  lazy val PostedReplies: Action.Success = Action.Success("post", "replies", "discord")
 
   /** Factory for reporting successfully loading messages. */
-  lazy val LoadedMessages: Action.Success = Action.Success("load", " messages", "discord")
+  lazy val LoadedMessages: Action.Success = Action.Success("load", "messages", "discord")
 
   /** Factory for reporting successfully preparing teams. */
-  lazy val PreparedTeams: Action.Success = Action.Success("prepare", " teams", "discord")
+  lazy val PreparedTeams: Action.Success = Action.Success("prepare", "teams", "discord")
 
   /** Factory for reporting failures to post replies. */
   lazy val FailedToPostReplies: Action.Failure = Action.Failure("post", "replies", "discord")
 
   /** Factory for reporting failures to load messages. */
-  lazy val FailedToLoadMessages: Action.Failure = Action.Failure("load", " messages", "discord")
+  lazy val FailedToLoadMessages: Action.Failure = Action.Failure("load", "messages", "discord")
 
   /** Factory for reporting failures to prepare teams. */
-  lazy val FailedToPrepareTeams: Action.Failure = Action.Failure("prepare", " teams", "discord")
+  lazy val FailedToPrepareTeams: Action.Failure = Action.Failure("prepare", "teams", "discord")
 
   /** Factory for reporting successfully loading sessions. */
-  lazy val SessionLoaded: Action.Success = Action.Success("load", " session", "storage")
+  lazy val SessionLoaded: Action.Success = Action.Success("load", "session", "storage")
 
   /** Factory for reporting successfully skipping sessions. */
-  lazy val SessionSkipped: Action.Success = Action.Success("skip", " session", "storage")
+  lazy val SessionSkipped: Action.Success = Action.Success("skip", "session", "storage")
 
   /** Factory for reporting successfully saving sessions. */
-  lazy val SessionSaved: Action.Success = Action.Success("save", " session", "storage")
+  lazy val SessionSaved: Action.Success = Action.Success("save", "session", "storage")
 
   /** Factory for reporting successfully loading histories. */
-  lazy val HistoryLoaded: Action.Success = Action.Success("load", " history", "storage")
+  lazy val HistoryLoaded: Action.Success = Action.Success("load", "history", "storage")
 
   /** Factory for reporting successfully prepending to histories. */
-  lazy val HistoryPrepended: Action.Success = Action.Success("prepend", " history", "storage")
+  lazy val HistoryPrepended: Action.Success = Action.Success("prepend", "history", "storage")
 
   /** Factory for reporting failures to decode sessions. */
   lazy val FailedToDecodeSession: Action.Failure = Action.Failure("decode", "session", "storage")
@@ -197,7 +197,7 @@ object Reporting {
       /* Report to the appropriate system stream. */
       override def report(action: Action): Unit =
         (if (action.dimensions("outcome") == "success") System.out else System.err).println(
-          s"${action.message} ${action.dimensions.mkString("{", ",", "}")} @${action.channelId} !${action.timestamp}"
+          s"${action.message} ${action.dimensions.mkString("{", ", ", "}")} @${action.channelId} !${action.timestamp}"
         )
 
     }

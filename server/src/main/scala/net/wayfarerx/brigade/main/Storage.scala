@@ -23,24 +23,15 @@ import java.nio.charset.Charset
 import java.nio.file.{Files, Path, Paths}
 
 import collection.JavaConverters._
-import collection.immutable.ListMap
+import collection.immutable.{ListMap, ListSet}
 import util.{Failure, Success, Try}
-
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl._
-
 import io.circe._
 import io.circe.generic.auto._
 import io.circe.generic.extras.{Configuration => Config}
 import io.circe.syntax._
-
-import software.amazon.awssdk.services.s3.model.{
-  GetObjectRequest,
-  ListObjectsRequest,
-  NoSuchKeyException,
-  PutObjectRequest
-}
-
+import software.amazon.awssdk.services.s3.model.{GetObjectRequest, ListObjectsRequest, NoSuchKeyException, PutObjectRequest}
 import net.wayfarerx.aws.S3
 
 /**
@@ -174,7 +165,7 @@ object Storage {
   /** The ledger JSON decoder. */
   private implicit val LedgerDecoder: Decoder[Ledger] =
     _.as[Vector[(Message.Id, User, Vector[(Command.Mutation, Int)])]]
-      .map(v => Ledger(v.map(e => Ledger.Entry(e._1, e._2, e._3))))
+      .map(v => Ledger(ListSet(v.map(e => Ledger.Entry(e._1, e._2, e._3)): _*)))
 
   /**
    * Creates a storage behavior using the local file system.
@@ -309,21 +300,24 @@ object Storage {
       /* Read a session from disk. */
       override def loadSession(channelId: Channel.Id, cb: Try[Option[Array[Byte]]] => Unit): Unit =
         cb(Try {
-          val path = root.resolve(Paths.get(channelId.toString, sessionFileName))
+          val path = root.resolve(Paths.get(channelId.value.toString, sessionFileName))
           if (Files.isRegularFile(path)) Some(Files.readAllBytes(path)) else None
         })
 
       /* Write a session to disk. */
       override def saveSession(channelId: Channel.Id, session: Array[Byte], cb: Try[Unit] => Unit): Unit =
         cb(Try {
-          val path = root.resolve(Paths.get(channelId.toString, sessionFileName))
-          if (!Files.isDirectory(path)) Files.write(path, session)
+          val path = root.resolve(Paths.get(channelId.value.toString, sessionFileName))
+          if (!Files.isDirectory(path)) {
+            Files.createDirectories(path.getParent)
+            Files.write(path, session)
+          }
         })
 
       /* Read a number of team sets from disk. */
       override def loadHistory(channelId: Channel.Id, depth: Int, cb: Try[Vector[Array[Byte]]] => Unit): Unit =
         cb(Try {
-          val path = root.resolve(Paths.get(channelId.toString))
+          val path = root.resolve(Paths.get(channelId.value.toString))
           if (!Files.isDirectory(path)) Vector() else Files.list(path).iterator().asScala.filter { child =>
             Files.isRegularFile(child) && child.getName(child.getNameCount - 1).startsWith("history_")
           }.take(depth).map(Files.readAllBytes).toVector
@@ -332,8 +326,11 @@ object Storage {
       /* Write a team set to disk. */
       override def saveToHistory(channelId: Channel.Id, teams: Array[Byte], ts: Long, cb: Try[Unit] => Unit): Unit =
         cb(Try {
-          val path = root.resolve(Paths.get(channelId.toString, historyFileName(ts)))
-          if (!Files.isDirectory(path)) Files.write(path, teams)
+          val path = root.resolve(Paths.get(channelId.value.toString, historyFileName(ts)))
+          if (!Files.isDirectory(path)) {
+            Files.createDirectories(path.getParent)
+            Files.write(path, teams)
+          }
         })
 
     }

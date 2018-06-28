@@ -89,7 +89,7 @@ class ChannelSpec extends FlatSpec with Matchers {
       Ledger.Entry(5, jim, Command.Volunteer(jim, dps)),
       Ledger.Entry(6, kim, Command.Volunteer(kim, dps), Command.Volunteer(kim, tank))
     ), 9L), 9L))
-    outgoing.expectMessage(Event.PostReplies(id, Vector(Reply.UpdateTeams(teamsMsgId, Vector(initialTeam))), 9L))
+    outgoing.expectMessage(Event.PostReplies(id, Vector(Reply.UpdateTeams(slots, teamsMsgId, Vector(initialTeam))), 9L))
     outgoing.hasMessages shouldBe false
     // Reconfigure the brigade to require a history.
     tester.run(Event.Configure(Vector(Message(cfgMsgId, bob, "!brigade", "!cycle")), 10L))
@@ -107,7 +107,7 @@ class ChannelSpec extends FlatSpec with Matchers {
       Ledger.Entry(6, kim, Command.Volunteer(kim, dps), Command.Volunteer(kim, tank)),
       Ledger.Entry(7, sam, Command.Volunteer(sam, healer))
     ), 12L), 12L))
-    outgoing.expectMessage(Event.PostReplies(id, Vector(Reply.UpdateTeams(teamsMsgId, Vector(
+    outgoing.expectMessage(Event.PostReplies(id, Vector(Reply.UpdateTeams(slots, teamsMsgId, Vector(
       Team(ListMap(tank -> Vector(bob), healer -> Vector(sam), dps -> Vector(jim, kim))),
       Team(ListMap(tank -> Vector(), healer -> Vector(sue), dps -> Vector()))
     ))), 12L))

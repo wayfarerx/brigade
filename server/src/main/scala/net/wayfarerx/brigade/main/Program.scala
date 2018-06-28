@@ -19,7 +19,6 @@
 package net.wayfarerx.brigade
 package main
 
-import java.nio.charset.Charset
 import java.nio.file.{Path, Paths}
 
 import collection.JavaConverters._
@@ -35,7 +34,7 @@ import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient
 import software.amazon.awssdk.services.s3.S3AsyncClient
 
 import sx.blah.discord.api.{ClientBuilder, IDiscordClient}
-import sx.blah.discord.api.events.EventDispatcher
+import sx.blah.discord.api.events.{EventDispatcher, IListener}
 import sx.blah.discord.handle.impl.events
 import sx.blah.discord.handle.obj.{IChannel, IMessage}
 
@@ -122,47 +121,17 @@ object Program extends App {
     self: ActorRef[Action]
   ) {
 
-    // Register guild listeners.
-    dispatcher.registerListener { event: events.guild.GuildCreateEvent =>
-      event.getGuild.getChannels.asScala foreach (self ! Enter(_, System.currentTimeMillis))
-    }
-    dispatcher.registerListener { event: events.guild.GuildLeaveEvent =>
-      event.getGuild.getChannels.asScala foreach (self ! Exit(_))
-    }
-    // TODO Ownership transfer.
-
-    // Register channel listeners.
-    dispatcher.registerListener { event: events.guild.channel.ChannelCreateEvent =>
-      if (!event.getChannel.isPrivate) self ! Enter(event.getChannel, System.currentTimeMillis)
-    }
-    dispatcher.registerListener { event: events.guild.channel.ChannelDeleteEvent =>
-      if (!event.getChannel.isPrivate) self ! Exit(event.getChannel)
-    }
-
-    // Register message listeners.
-    dispatcher.registerListener { event: events.guild.channel.message.MessageReceivedEvent =>
-      if (!event.getChannel.isPrivate) self ! Submit(event.getMessage, deleted = false, System.currentTimeMillis)
-    }
-    dispatcher.registerListener { event: events.guild.channel.message.MessageEditEvent =>
-      if (!event.getChannel.isPrivate) self ! Submit(event.getMessage, deleted = false, System.currentTimeMillis)
-    }
-    dispatcher.registerListener { event: events.guild.channel.message.MessageUpdateEvent =>
-      if (!event.getChannel.isPrivate) self ! Submit(event.getMessage, deleted = false, System.currentTimeMillis)
-    }
-    dispatcher.registerListener { event: events.guild.channel.message.MessageDeleteEvent =>
-      if (!event.getChannel.isPrivate) self ! Submit(event.getMessage, deleted = true, System.currentTimeMillis)
-    }
-    dispatcher.registerListener { event: events.guild.channel.message.MessagePinEvent =>
-      if (!event.getChannel.isPrivate) self ! Configure(event.getChannel, System.currentTimeMillis)
-    }
-    dispatcher.registerListener { event: events.guild.channel.message.MessageUnpinEvent =>
-      if (!event.getChannel.isPrivate) self ! Configure(event.getChannel, System.currentTimeMillis)
-    }
-
-    // Register the ready listener.
-    dispatcher.registerListener { event: events.ReadyEvent =>
-      event.getClient.getChannels(false).asScala foreach (self ! Enter(_, System.currentTimeMillis))
-    }
+    dispatcher.registerListener(GuildEnter)
+    dispatcher.registerListener(GuildExit)
+    dispatcher.registerListener(ChannelEnter)
+    dispatcher.registerListener(ChannelExit)
+    dispatcher.registerListener(MessageReceived)
+    dispatcher.registerListener(MessageUpdated)
+    dispatcher.registerListener(MessageEdited)
+    dispatcher.registerListener(MessageDeleted)
+    dispatcher.registerListener(MessagePinned)
+    dispatcher.registerListener(MessageUnpinned)
+    dispatcher.registerListener(Ready)
 
     /**
      * The behavior of the main program.
@@ -173,25 +142,91 @@ object Program extends App {
     def behavior(channels: Map[Channel.Id, ActorRef[Event.Incoming]]): Behaviors.Receive[Action] =
       Behaviors.receive[Action] { (ctx, act) =>
         act match {
+
           case Enter(channelId, owner, timestamp) =>
+            ctx.log.debug("Program.Enter({}, {}, {})", channelId.value, owner.id, timestamp)
             if (channels contains channelId) Behaviors.same else {
               val channel = ctx.spawn(Channel(channelId, owner, router), s"channel:${channelId.value}")
               storage ! Storage.LoadSession(channelId, channel, timestamp)
               behavior(channels + (channelId -> channel))
             }
+
           case Configure(channelId, messages, timestamp) =>
+            ctx.log.debug("Program.Configure({}, {}, {})", channelId.value, messages.size, timestamp)
             channels get channelId foreach (_ ! Event.Configure(messages, timestamp))
             Behaviors.same
+
           case Submit(channelId, message, timestamp) =>
+            ctx.log.debug("Program.Submit({}, {}, {})", channelId.value, message.toString, timestamp)
             channels get channelId foreach (_ ! Event.Submit(message, timestamp))
             Behaviors.same
+
           case Exit(channelId) =>
+            ctx.log.debug("Program.Exit({})", channelId.value)
             if (!(channels contains channelId)) Behaviors.same else {
               ctx.stop(channels(channelId))
               behavior(channels - channelId)
             }
+
         }
       }
+
+    object GuildEnter extends IListener[events.guild.GuildCreateEvent] {
+      override def handle(event: events.guild.GuildCreateEvent): Unit =
+        event.getGuild.getChannels.asScala foreach (self ! Enter(_, System.currentTimeMillis))
+    }
+
+    object GuildExit extends IListener[events.guild.GuildLeaveEvent] {
+      override def handle(event: events.guild.GuildLeaveEvent): Unit =
+        event.getGuild.getChannels.asScala foreach (self ! Exit(_))
+    }
+
+    // TODO Ownership transfer.
+
+    object ChannelEnter extends IListener[events.guild.channel.ChannelCreateEvent] {
+      override def handle(event: events.guild.channel.ChannelCreateEvent): Unit =
+        if (!event.getChannel.isPrivate) self ! Enter(event.getChannel, System.currentTimeMillis)
+    }
+
+    object ChannelExit extends IListener[events.guild.channel.ChannelDeleteEvent] {
+      override def handle(event: events.guild.channel.ChannelDeleteEvent): Unit =
+        if (!event.getChannel.isPrivate) self ! Exit(event.getChannel)
+    }
+
+    object MessageReceived extends IListener[events.guild.channel.message.MessageReceivedEvent] {
+      override def handle(event: events.guild.channel.message.MessageReceivedEvent): Unit =
+        if (!event.getChannel.isPrivate) self ! Submit(event.getMessage, deleted = false, System.currentTimeMillis)
+    }
+
+    object MessageUpdated extends IListener[events.guild.channel.message.MessageUpdateEvent] {
+      override def handle(event: events.guild.channel.message.MessageUpdateEvent): Unit =
+        if (!event.getChannel.isPrivate) self ! Submit(event.getMessage, deleted = false, System.currentTimeMillis)
+    }
+
+    object MessageEdited extends IListener[events.guild.channel.message.MessageEditEvent] {
+      override def handle(event: events.guild.channel.message.MessageEditEvent): Unit =
+        if (!event.getChannel.isPrivate) self ! Submit(event.getMessage, deleted = false, System.currentTimeMillis)
+    }
+
+    object MessageDeleted extends IListener[events.guild.channel.message.MessageDeleteEvent] {
+      override def handle(event: events.guild.channel.message.MessageDeleteEvent): Unit =
+        if (!event.getChannel.isPrivate) self ! Submit(event.getMessage, deleted = true, System.currentTimeMillis)
+    }
+
+    object MessagePinned extends IListener[events.guild.channel.message.MessagePinEvent] {
+      override def handle(event: events.guild.channel.message.MessagePinEvent): Unit =
+        if (!event.getChannel.isPrivate) self ! Configure(event.getChannel, System.currentTimeMillis)
+    }
+
+    object MessageUnpinned extends IListener[events.guild.channel.message.MessageUnpinEvent] {
+      override def handle(event: events.guild.channel.message.MessageUnpinEvent): Unit =
+        if (!event.getChannel.isPrivate) self ! Configure(event.getChannel, System.currentTimeMillis)
+    }
+
+    object Ready extends IListener[events.ReadyEvent] {
+      override def handle(event: events.ReadyEvent): Unit =
+        event.getClient.getChannels(false).asScala foreach (self ! Enter(_, System.currentTimeMillis))
+    }
 
   }
 

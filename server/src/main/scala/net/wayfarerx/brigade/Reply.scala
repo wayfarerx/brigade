@@ -18,6 +18,8 @@
 
 package net.wayfarerx.brigade
 
+import scala.collection.immutable.ListMap
+
 /**
  * Base type for replies produced when sending events to a brigade.
  */
@@ -44,8 +46,8 @@ object Reply {
       case (status@Status(_, _, _), index) => status -> index
     }.groupBy(_._1.user).values.map(_.last).toVector
     val lastTeam = indexed.collect {
-      case item@(UpdateTeams(_, _), _) => item
-      case item@(FinalizeTeams(_, _), _) => item
+      case item@(UpdateTeams(_, _, _), _) => item
+      case item@(FinalizeTeams(_, _, _), _) => item
       case item@(AbandonTeams(_), _) => item
     }.lastOption.toVector
     (firstUsage ++ lastStatuses ++ lastTeam).sortBy(_._2).map(_._1)
@@ -97,18 +99,20 @@ object Reply {
   /**
    * A reply that updates the listing of teams in a brigade.
    *
+   * @param slots      The slots to fill for each team.
    * @param teamsMsgId The ID of the display message to update.
    * @param teams      The teams that have been assembled for the brigade.
    */
-  case class UpdateTeams(teamsMsgId: Message.Id, teams: Vector[Team]) extends TeamsChanged
+  case class UpdateTeams(slots: ListMap[Role, Int], teamsMsgId: Message.Id, teams: Vector[Team]) extends TeamsChanged
 
   /**
    * A reply that finalizes the listing of teams in a brigade.
    *
+   * @param slots      The slots to fill for each team.
    * @param teamsMsgId The ID of the display message to update.
    * @param teams      The teams that have been assembled for the brigade.
    */
-  case class FinalizeTeams(teamsMsgId: Message.Id, teams: Vector[Team]) extends TeamsChanged
+  case class FinalizeTeams(slots: ListMap[Role, Int], teamsMsgId: Message.Id, teams: Vector[Team]) extends TeamsChanged
 
   /**
    * A reply that abandons the listing of teams in a brigade.

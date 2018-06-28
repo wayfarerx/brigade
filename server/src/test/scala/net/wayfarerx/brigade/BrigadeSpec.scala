@@ -75,8 +75,9 @@ class BrigadeSpec extends FlatSpec with Matchers {
   }
 
   it should "build ledgers and teams from sequences of submissions" in {
+    val slots = ListMap(tank -> 1, healer -> 1, dps -> 2)
     val brigade = (Brigade().configure(Set(bob), Configuration.Default, 0L)._1 /: Vector(
-      (bob, Message.Id(1), Vector(Command.Open(ListMap(tank -> 1, healer -> 1, dps -> 2), Some(Message.Id(0)))), 1L),
+      (bob, Message.Id(1), Vector(Command.Open(slots, Some(Message.Id(0)))), 1L),
       (bob, Message.Id(2), Vector(Command.Assign(bob, tank)), 2L),
       (bob, Message.Id(3), Vector(Command.Assign(sue, healer)), 3L),
       (bob, Message.Id(4), Vector(Command.Volunteer(bob, healer), Command.Volunteer(bob, dps)), 4L),
@@ -88,7 +89,7 @@ class BrigadeSpec extends FlatSpec with Matchers {
       (jim, Message.Id(10), Vector(Command.DropAll(jim), Command.Volunteer(jim, tank)), 10L)
     )) { (previous, submission) =>
       val (next, replies) = (previous.submit _).tupled(submission)
-      Reply.normalize(replies).collect { case reply@Reply.UpdateTeams(_, _) => reply }.length shouldBe 1
+      Reply.normalize(replies).collect { case reply@Reply.UpdateTeams(_, _, _) => reply }.length shouldBe 1
       next
     }
     brigade shouldBe Brigade(Set(bob), Configuration.Default, Brigade.Active(
@@ -111,7 +112,7 @@ class BrigadeSpec extends FlatSpec with Matchers {
     ))
     val (next, replies) = brigade.submit(bob, Message.Id(11), Vector(Command.Close), 11L)
     next shouldBe Brigade(Set(bob), Configuration.Default, Brigade.Inactive(11L))
-    replies shouldBe Vector(Reply.FinalizeTeams(Message.Id(0), Vector(Team(ListMap(
+    replies shouldBe Vector(Reply.FinalizeTeams(slots, Message.Id(0), Vector(Team(ListMap(
       tank -> Vector(jim),
       healer -> Vector(sue),
       dps -> Vector(bob, kim)
@@ -119,8 +120,9 @@ class BrigadeSpec extends FlatSpec with Matchers {
   }
 
   it should "build ledgers and teams from sequences of submissions with edits" in {
+    val slots = ListMap(tank -> 1, healer -> 1, dps -> 2)
     val brigade = (Brigade().configure(Set(bob), Configuration.Default, 0L)._1 /: Vector(
-      (bob, Message.Id(1), Vector(Command.Open(ListMap(tank -> 1, healer -> 1, dps -> 2), Some(Message.Id(0)))), 1L),
+      (bob, Message.Id(1), Vector(Command.Open(slots, Some(Message.Id(0)))), 1L),
       (bob, Message.Id(2), Vector(Command.Assign(bob, tank)), 2L),
       (bob, Message.Id(3), Vector(Command.Assign(sue, healer)), 3L),
       (bob, Message.Id(4), Vector(Command.Volunteer(bob, healer), Command.Volunteer(bob, dps)), 4L),
@@ -131,7 +133,7 @@ class BrigadeSpec extends FlatSpec with Matchers {
       (bob, Message.Id(4), Vector(Command.Volunteer(bob, tank), Command.Volunteer(bob, dps)), 9L)
     )) { (previous, submission) =>
       val (next, replies) = (previous.submit _).tupled(submission)
-      Reply.normalize(replies).collect { case reply@Reply.UpdateTeams(_, _) => reply }.length shouldBe 1
+      Reply.normalize(replies).collect { case reply@Reply.UpdateTeams(_, _, _) => reply }.length shouldBe 1
       next
     }
     brigade shouldBe Brigade(Set(bob), Configuration.Default, Brigade.Active(
@@ -153,7 +155,7 @@ class BrigadeSpec extends FlatSpec with Matchers {
     ))
     val (next, replies) = brigade.submit(bob, Message.Id(8), Vector(Command.Close), 10L)
     next shouldBe Brigade(Set(bob), Configuration.Default, Brigade.Inactive(10L))
-    replies shouldBe Vector(Reply.FinalizeTeams(Message.Id(0), Vector(Team(ListMap(
+    replies shouldBe Vector(Reply.FinalizeTeams(slots, Message.Id(0), Vector(Team(ListMap(
       tank -> Vector(jim),
       healer -> Vector(sue),
       dps -> Vector(bob, kim)
@@ -161,8 +163,9 @@ class BrigadeSpec extends FlatSpec with Matchers {
   }
 
   it should "build teams after editing the open message" in {
+    val slots = ListMap(tank -> 1, healer -> 1, dps -> 2)
     val (brigade, replies) = (Brigade().configure(Set(bob), Configuration.Default, 0L)._1 /: Vector(
-      (bob, Message.Id(1), Vector(Command.Open(ListMap(tank -> 1, healer -> 1, dps -> 1), Some(Message.Id(0)))), 1L),
+      (bob, Message.Id(1), Vector(Command.Open(slots, Some(Message.Id(0)))), 1L),
       (bob, Message.Id(2), Vector(Command.Assign(bob, tank)), 2L),
       (bob, Message.Id(3), Vector(Command.Assign(sue, healer)), 3L),
       (bob, Message.Id(4), Vector(Command.Volunteer(bob, healer), Command.Volunteer(bob, dps)), 4L),
@@ -173,7 +176,7 @@ class BrigadeSpec extends FlatSpec with Matchers {
       (bob, Message.Id(4), Vector(Command.Volunteer(bob, tank), Command.Volunteer(bob, dps)), 9L)
     )) { (previous, submission) =>
       val (next, replies) = (previous.submit _).tupled(submission)
-      Reply.normalize(replies).collect { case reply@Reply.UpdateTeams(_, _) => reply }.length shouldBe 1
+      Reply.normalize(replies).collect { case reply@Reply.UpdateTeams(_, _, _) => reply }.length shouldBe 1
       next
     }.submit(
       bob,
@@ -181,14 +184,11 @@ class BrigadeSpec extends FlatSpec with Matchers {
       Vector(Command.Open(ListMap(tank -> 1, healer -> 1, dps -> 2), Some(Message.Id(0)))),
       10L
     )
-    replies shouldBe Vector(Reply.UpdateTeams(
-      Message.Id(0),
-      Vector(Team(ListMap(
-        tank -> Vector(jim),
-        healer -> Vector(sue),
-        dps -> Vector(bob, kim)
-      )))
-    ))
+    replies shouldBe Vector(Reply.UpdateTeams(slots, Message.Id(0), Vector(Team(ListMap(
+      tank -> Vector(jim),
+      healer -> Vector(sue),
+      dps -> Vector(bob, kim)
+    )))))
     brigade.submit(bob, Message.Id(8), Vector(
       Command.Open(ListMap(tank -> 1), Some(Message.Id(9))),
       Command.Help,
@@ -198,11 +198,12 @@ class BrigadeSpec extends FlatSpec with Matchers {
 
   it should "reply to queries" in {
     val brigade = Brigade().configure(Set(bob), Configuration.Default, 0L)._1
+    val slots = ListMap(tank -> 1, healer -> 1, dps -> 2)
     val (next, replies) = brigade.submit(
       bob,
       Message.Id(1),
       Vector(
-        Command.Open(ListMap(tank -> 1, healer -> 1, dps -> 2), Some(Message.Id(0))),
+        Command.Open(slots, Some(Message.Id(0))),
         Command.Assign(bob, tank),
         Command.Assign(sue, healer),
         Command.Volunteer(jim, dps), Command.Volunteer(jim, tank),
@@ -216,31 +217,29 @@ class BrigadeSpec extends FlatSpec with Matchers {
     Reply.normalize(replies) shouldBe Vector(
       Reply.Status(sue, Vector(healer), Vector()),
       Reply.Status(kim, Vector(), Vector(healer, dps)),
-      Reply.FinalizeTeams(
-        Message.Id(0),
-        Vector(Team(ListMap(
-          tank -> Vector(bob),
-          healer -> Vector(sue),
-          dps -> Vector(jim, kim)
-        )))
-      )
+      Reply.FinalizeTeams(slots, Message.Id(0), Vector(Team(ListMap(
+        tank -> Vector(bob),
+        healer -> Vector(sue),
+        dps -> Vector(jim, kim)
+      ))))
     )
   }
 
   it should "retain active rosters when reconfigured with the appropriate organizers and abandon otherwise" in {
+    val slots = ListMap(tank -> 1, healer -> 1, dps -> 2)
     val brigade = (Brigade().configure(Set(bob), Configuration.Default, 0L)._1 /: Vector(
-      (bob, Message.Id(1), Vector(Command.Open(ListMap(tank -> 1, healer -> 1, dps -> 2), Some(Message.Id(0)))), 1L),
+      (bob, Message.Id(1), Vector(Command.Open(slots, Some(Message.Id(0)))), 1L),
       (bob, Message.Id(2), Vector(Command.Assign(bob, tank)), 2L)
     )) { (previous, submission) =>
       val (next, replies) = (previous.submit _).tupled(submission)
-      Reply.normalize(replies).collect { case reply@Reply.UpdateTeams(_, _) => reply }.length shouldBe 1
+      Reply.normalize(replies).collect { case reply@Reply.UpdateTeams(_, _, _) => reply }.length shouldBe 1
       next
     }
     brigade shouldBe Brigade(Set(bob), Configuration.Default, Brigade.Active(
       bob,
       Message.Id(1),
       Some(Message.Id(0)),
-      ListMap(tank -> 1, healer -> 1, dps -> 2),
+      slots,
       Ledger(
         Ledger.Entry(Message.Id(2), bob, Command.Assign(bob, tank))
       ),
@@ -251,13 +250,14 @@ class BrigadeSpec extends FlatSpec with Matchers {
       bob,
       Message.Id(1),
       Some(Message.Id(0)),
-      ListMap(tank -> 1, healer -> 1, dps -> 2),
+      slots,
       Ledger(
         Ledger.Entry(Message.Id(2), bob, Command.Assign(bob, tank))
       ),
       3L
     ))
     replies2 shouldBe Vector(Reply.UpdateTeams(
+      slots,
       Message.Id(0),
       Vector(Team(ListMap(tank -> Vector(bob), healer -> Vector(), dps -> Vector())))
     ))
@@ -267,12 +267,13 @@ class BrigadeSpec extends FlatSpec with Matchers {
   }
 
   it should "support reconfiguring history usage" in {
+    val slots = ListMap(tank -> 1, healer -> 1, dps -> 2)
     val brigade = Brigade().configure(Set(bob), Configuration.Default, 0L)._1
     val (next, firstReplies) = brigade.submit(
       bob,
       Message.Id(1),
       Vector(
-        Command.Open(ListMap(tank -> 1, healer -> 1, dps -> 2), Some(Message.Id(0))),
+        Command.Open(slots, Some(Message.Id(0))),
         Command.Volunteer(bob, tank), Command.Volunteer(bob, dps),
         Command.Volunteer(sue, healer),
         Command.Volunteer(jim, tank), Command.Volunteer(jim, dps),
@@ -281,6 +282,7 @@ class BrigadeSpec extends FlatSpec with Matchers {
       1L)
     Reply.normalize(firstReplies) shouldBe Vector(
       Reply.UpdateTeams(
+        slots,
         Message.Id(0),
         Vector(Team(ListMap(
           tank -> Vector(bob),
@@ -299,6 +301,7 @@ class BrigadeSpec extends FlatSpec with Matchers {
       2L)
     Reply.normalize(lastReplies) shouldBe Vector(
       Reply.UpdateTeams(
+        slots,
         Message.Id(0),
         Vector(Team(ListMap(
           tank -> Vector(jim),

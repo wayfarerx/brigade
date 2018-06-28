@@ -28,13 +28,13 @@ import concurrent.{ExecutionContext, Future}
 import concurrent.duration._
 import language.implicitConversions
 import util.{Failure, Success}
-
 import akka.actor.typed.{ActorRef, Behavior, PostStop}
 import akka.actor.typed.scaladsl._
-
 import sx.blah.discord.api.IDiscordClient
 import sx.blah.discord.handle.obj.IChannel
 import sx.blah.discord.util.{EmbedBuilder, RequestBuffer}
+
+import scala.collection.immutable.ListMap
 
 
 /**
@@ -64,10 +64,10 @@ final class Discord private(client: IDiscordClient, reporting: ActorRef[Reportin
               send(channelId, _.sendMessage(usageMsg))
             case Reply.Status(user, assigned, volunteered) =>
               send(channelId, _.sendMessage(statusMsg(user, assigned, volunteered)))
-            case Reply.UpdateTeams(teamsMsgId, teams) =>
-              send(channelId, _.getMessageByID(teamsMsgId.value).edit(teamsChangedMsg(teams, finalized = false)))
-            case Reply.FinalizeTeams(teamsMsgId, teams) =>
-              send(channelId, _.getMessageByID(teamsMsgId.value).edit(teamsChangedMsg(teams, finalized = true)))
+            case Reply.UpdateTeams(slots, teamsMsgId, teams) =>
+              send(channelId, _.getMessageByID(teamsMsgId.value).edit(teamsChangedMsg(slots, teams, finalized = false)))
+            case Reply.FinalizeTeams(slots, teamsMsgId, teams) =>
+              send(channelId, _.getMessageByID(teamsMsgId.value).edit(teamsChangedMsg(slots, teams, finalized = true)))
             case Reply.AbandonTeams(teamsMsgId) =>
               send(channelId, _.getMessageByID(teamsMsgId.value).edit(abandonTeamsMsg))
           }
@@ -89,8 +89,12 @@ final class Discord private(client: IDiscordClient, reporting: ActorRef[Reportin
         Future {
           val pinned = send(channelId, _.getPinnedMessages).asScala.toVector
           val history = send(channelId,
-            _.getMessageHistoryFrom(Instant.ofEpochMilli(math.max(lastModified, -6.hours.fromNow.time.toMillis))))
-          Event.Configure(pinned map Utils.transformMessage, pinned.map(_.getTimestamp.toEpochMilli).max) ->
+            _.getMessageHistoryFrom(Instant.ofEpochMilli(math.max(lastModified, timestamp - 6.hours.toMillis))))
+          Event.Configure(
+            pinned map Utils.transformMessage,
+            ((None: Option[Long]) /: pinned.map(_.getTimestamp.toEpochMilli)) { (p, n) =>
+              p map (Math.max(_, n))
+            } getOrElse timestamp) ->
             history.asArray.toVector.map(m => Event.Submit(Utils.transformMessage(m), m.getTimestamp.toEpochMilli))
         } onComplete {
           case Success((configure, submissions)) =>
@@ -217,15 +221,20 @@ object Discord {
   }
 
   /** The message used when updating teams. */
-  private def teamsChangedMsg(teams: Vector[Team], finalized: Boolean) = {
+  private def teamsChangedMsg(slots: ListMap[Role, Int], teams: Vector[Team], finalized: Boolean) = {
     val builder = new EmbedBuilder
     builder.withTitle(if (finalized) "Final Teams" else "Current Teams")
     builder.withColor(114, 137, 218)
-    teams.zipWithIndex foreach { case (team, index) =>
-      val content = team.members flatMap { case (role, users) =>
-        users map (u => s"$role: <@!${u.id}>")
+    teams.zipWithIndex foreach { case (team, teamIndex) =>
+      val content = slots.map { case (role, count) =>
+        val members = team.members.getOrElse(role, Vector()) map (Some(_))
+        (role, members ++ Vector.fill(count - members.size)(None))
+      } flatMap { case (role, users) =>
+        users.zipWithIndex map { case (u, i) =>
+          s"${role.id} ${i + 1}: ${u map (user => s"<@!${user.id}>") getOrElse "?"}"
+        }
       } mkString "\r\n"
-      builder.appendField(s"Team ${index + 1}", content, true)
+      builder.appendField(s"Team ${teamIndex + 1}", content, true)
     }
     builder.build()
   }

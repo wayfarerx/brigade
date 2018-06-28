@@ -18,10 +18,12 @@
 
 package net.wayfarerx.brigade
 
+import scala.collection.immutable.ListSet
+
 /**
  * A recording of the mutations that occur during the sign-up phase of building a brigade.
  */
-case class Ledger(entries: Vector[Ledger.Entry]) {
+case class Ledger(entries: ListSet[Ledger.Entry]) {
 
   import Ledger._
 
@@ -31,7 +33,7 @@ case class Ledger(entries: Vector[Ledger.Entry]) {
    * @param entry The ledger to append to.
    * @return The new ledger.
    */
-  def :+ (entry: Entry): Ledger = copy(entries :+ entry)
+  def :+ (entry: Entry): Ledger = copy(entries + entry)
 
   /**
    * Constructs a roster from this ledger.
@@ -96,7 +98,7 @@ object Ledger {
    * @return A ledger with the specified entries.
    */
   def apply(entries: Entry*): Ledger =
-    Ledger(entries.toVector)
+    Ledger(ListSet(entries: _*))
 
   /**
    * An entry in the ledger corresponding to a message post, edit or delete event.
